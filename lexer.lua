@@ -30,7 +30,15 @@ local function get_sci_suffix(s, i)
 end
 
 local function parse_number(s, i)
-  local ii, jj, text = s:find('^([0-9]+)', i)
+  local ii, jj, text = s:find('^(%d+)', i)
+  if ii then
+    local _, sj, sci = get_sci_suffix(s, jj + 1)
+    return ii, sj or jj, tonumber(text) * 10 ^ (sci or 0)
+  end
+end
+
+local function parse_float(s, i)
+  local ii, jj, text = s:find('^(%d*%.?%d+)', i)
   if ii then
     local _, sj, sci = get_sci_suffix(s, jj + 1)
     return ii, sj or jj, tonumber(text) * 10 ^ (sci or 0)
@@ -64,6 +72,7 @@ local function lex(str)
     {parse_unit, 'u'},
     {parse_syntax, 's'},
     {parse_number, 'n'},
+    {parse_float, 'f'},
   }
 
   local t = {}
@@ -73,8 +82,8 @@ local function lex(str)
     for _, item in ipairs(p) do
       local parser, meta = table.unpack(item)
       local _, jj, text = parser(str, i)
-      if text then table.insert(t, {text, kind = meta}) end
       if jj then i = jj + 1 end
+      if text then table.insert(t, {text, kind = meta}); break end
     end
 
     if i == last_i then

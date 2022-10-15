@@ -1,4 +1,6 @@
-local cmath = require 'cmath'
+local cmath = require 'cmath' -- FIXME: Remove or refresh
+local lib = require 'base'
+
 local fraction = {}
 
 -- Create normalized fraction
@@ -26,6 +28,19 @@ function fraction.make(numerator, denominator)
     return {'int', cmath.div(numerator, denominator)}
   end
   return {'frac', num = cmath.div(numerator, gcd), denom = cmath.div(denominator, gcd)}
+end
+
+-- Test fraction f for equality with num/denom
+---@param f table       Fraction or Integer to test
+---@param num number    Numerator
+---@param denom number  Denominator
+function fraction.eq3(f, num, denom)
+  if lib.kind(f, 'int') then
+    return num == f[2] and denom == 1
+  elseif lib.kind(f, 'frac') then
+    return f.num == num and f.denom == denom
+  end
+  error('invalid type for f')
 end
 
 -- Check value for fraction

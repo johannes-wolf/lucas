@@ -1,1 +1,13 @@
-lucas
+luCAS - a work-in-progress CAS written in lua
+
+Whats works:
+- Basic math (+, -, *, /, ^)
+- Fractions (n:d)
+- Symbolic math
+- Basic unit support (no support for finding matching compound units)
+
+What does not:
+- Floating point numbers
+- Functions (trig, …)
+- Polynom division
+- Everything else
