@@ -1,9 +1,5 @@
 local units = { table = {} }
 
-function units.compile()
-
-end
-
 local function pow10(n)
   return {'^', {'int', 10}, {'int', n}}
 end

@@ -4,13 +4,6 @@ local lib = require 'lib'
 
 local m = {}
 
-function m.is_zero(a)
-  if a[1] == 'int'   then return a[2] == 0 end
-  if a[1] == 'float' then return a[2] == 0 end
-  if a[1] == 'frac'  then return a.num == 0 end
-  return false
-end
-
 function m.is_int(a)
   return a and a[1] == 'int'
 end
@@ -29,18 +22,37 @@ local eval = {}
 ---@param n any
 ---@return number
 function eval.numerator(n)
-  if n[1] == 'int' then return n[2] end
-  if n[1] == 'frac' then return n.num end
-  --error('eval.numerator: not implemented for type '..n[1])
-  return 1
+  if lib.kind(n, 'int', 'float') then
+    return n[2]
+  elseif lib.kind(n, 'frac') then
+    return n.num
+  end
+  error('not implemented')
 end
 
 -- Return denominator of value n
 ---@param n any
 ---@return number
 function eval.denominator(n)
-  if n[1] == 'frac' then return n.denom end
+  if lib.kind(n, 'frac') then
+    return n.denom
+  end
   return 1
+end
+
+-- Return the sign of number n
+---@param n any
+---@return number 1 if positive, -1 if negative or 0 if zero
+function eval.sign(n)
+  if lib.kind(n, 'int', 'float') then
+    return (n[2] > 0 and 1) or (n[2] == 0 and 0) or -1
+  elseif lib.kind(n, 'frac') then
+    return (n.num > 0 and 1) or (n.num == 0 and 0) or -1
+  end
+end
+
+function eval.is_zero(n)
+  return eval.sign(n) == 0
 end
 
 function eval.sum(a, b)
