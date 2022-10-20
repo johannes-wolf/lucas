@@ -1,6 +1,6 @@
 local operator = require 'operator'
 local units = require 'units'
-local lib = require 'base'
+local lib = require 'lib'
 
 local output = {
   fancy_units = true,

@@ -1,6 +1,6 @@
 local fraction = require 'fraction'
 local float = require 'float'
-local lib = require 'base'
+local lib = require 'lib'
 
 local m = {}
 

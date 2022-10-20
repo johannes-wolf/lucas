@@ -1,5 +1,5 @@
 local fraction = require 'fraction'
-local lib = require 'base'
+local lib = require 'lib'
 
 local functions = { table = {} }
 

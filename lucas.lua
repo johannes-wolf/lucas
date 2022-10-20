@@ -6,7 +6,7 @@ local float = require 'float'
 local eval = require 'eval'
 local units = require 'units'
 
-local lib = require 'base'
+local lib = require 'lib'
 local kind, map = lib.kind, lib.map
 
 local function rule(r)

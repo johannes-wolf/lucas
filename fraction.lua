@@ -1,5 +1,5 @@
 local cmath = require 'cmath' -- FIXME: Remove or refresh
-local lib = require 'base'
+local lib = require 'lib'
 
 local fraction = {}
 
