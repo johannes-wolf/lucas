@@ -2,9 +2,7 @@ local lexer = require 'lexer'
 local parser = require 'parser'
 local util = require 'util'
 local fraction = require 'fraction'
-local float = require 'float'
 local operator = require 'operator'
-local units = require 'units'
 
 local input = {}
 

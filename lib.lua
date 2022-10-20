@@ -2,6 +2,23 @@ local util = require 'util'
 
 local base = {}
 
+-- Functions for expression creation
+function base.make_op(id, ...)
+  return {id, ...}
+end
+
+function base.make_sym(id)
+  return {'sym', id}
+end
+
+function base.make_fn(id, ...)
+  return {'fn', id, ...}
+end
+
+function base.make_unit(id)
+  return {'unit', id}
+end
+
 -- Get (or compare) expression kind
 function base.kind(expr, ...)
   if not expr then return nil end
@@ -11,13 +28,35 @@ function base.kind(expr, ...)
   return expr[1]
 end
 
+function base.is_const(u)
+  return base.kind(u, 'int', 'float', 'frac')
+end
+
 -- Get (or compare) expression function name (if kind = 'fn')
 function base.fn(u, ...)
   if not u or not base.kind(u, 'fn') then return nil end
   if select('#', ...) > 0 then
-    return util.set.contains({...}, u[1])
+    return util.set.contains({...}, u[2])
   end
-  return u[1]
+  return u[2]
+end
+
+-- Get (or compare) expression function name (if kind = 'sym')
+function base.sym(u, ...)
+  if not u or not base.kind(u, 'sym') then return nil end
+  if select('#', ...) > 0 then
+    return util.set.contains({...}, u[2])
+  end
+  return u[2]
+end
+
+-- Get (or compare) expression function name (if kind = 'sym')
+function base.unit(u, ...)
+  if not u or not base.kind(u, 'unit') then return nil end
+  if select('#', ...) > 0 then
+    return util.set.contains({...}, u[2])
+  end
+  return u[2]
 end
 
 -- Get argument offset
@@ -42,7 +81,7 @@ function base.get_args(u)
 end
 
 -- Apply function on each operand/argument
----@param fn function  Function to apply
+---@param fn function  Function to apply (vaule) => replacement
 ---@param u table      Operands
 ---@return table       Copy of op with fn applied
 function base.map(u, fn, ...)
@@ -53,9 +92,17 @@ function base.map(u, fn, ...)
     return u
   end
 end
+function base.mapi(u, fn, ...)
+  if base.num_args(u) > 0 then
+    return util.list.join(util.list.slice(u, 1, base.arg_offset(u)),
+                          util.list.mapi(base.get_args(u), fn, ...))
+  else
+    return u
+  end
+end
 
 -- Apply summation function on operands and return the result
-function base.sum(u, fn, ...)
+function base.sum_args(u, fn, ...)
   local s = 0
   if base.num_args(u) > 0 then
     for i = base.arg_offset(u) + 1, #u do
@@ -63,6 +110,36 @@ function base.sum(u, fn, ...)
     end
   end
   return s
+end
+
+-- Call function fn for each argument of u
+---@param u table      Expression
+---@param fn function  Predicate
+---@return boolean
+function base.all_args(u, fn, ...)
+  if base.num_args(u) > 0 then
+    for i = base.arg_offset(u) + 1, #u do
+      if not fn(u[i], ...) then
+        return false
+      end
+    end
+  end
+  return true
+end
+
+-- Call function fn for each argument of u
+---@param u table      Expression
+---@param fn function  Predicate
+---@return boolean
+function base.any_arg(u, fn, ...)
+  if base.num_args(u) > 0 then
+    for i = base.arg_offset(u) + 1, #u do
+      if fn(u[i], ...) then
+        return true
+      end
+    end
+  end
+  return false
 end
 
 -- Is natural number

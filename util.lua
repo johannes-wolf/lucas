@@ -32,12 +32,27 @@ end
 
 -- Apply function fn on each list element
 ---@param l table
----@param fn function
+---@param fn function (value) => replacement|nil
 ---@return any[]
 function list.map(l, fn, ...)
   local r = {}
   for _, v in ipairs(l) do
     local rv = fn(v, ...)
+    if rv then
+      table.insert(r, rv)
+    end
+  end
+  return r
+end
+
+-- Apply function fn on each list element
+---@param l table
+---@param fn function (index, value) => replacement|nil
+---@return any[]
+function list.mapi(l, fn, ...)
+  local r = {}
+  for i, v in ipairs(l) do
+    local rv = fn(i, v, ...)
     if rv then
       table.insert(r, rv)
     end
@@ -87,6 +102,24 @@ function tab.compare(a, b)
     return true
   end
   return a == b
+end
+
+function tab.clone(a)
+  local function clone_rec(x)
+    if type(x) == 'table' then
+      local t = {}
+      for k, v in pairs(x) do t[k] = clone_rec(v) end
+      return t
+    end
+    return x
+  end
+  return clone_rec(a)
+end
+
+function tab.replace_contents(a, b)
+  for k in next, a do rawset(a, k, nil) end
+  for k, v in next, b do rawset(a, k, v) end
+  return a
 end
 
 local set = {}

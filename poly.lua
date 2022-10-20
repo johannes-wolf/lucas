@@ -12,8 +12,8 @@ function poly.degree(expr)
   elseif kind(expr, '-') and num_args(expr) == 1 then
     return poly.degree(arg(expr, 1))
   elseif kind(expr, '*') then
-    return lib.sum(expr, function(v)
-                      return poly.degree(v)
+    return lib.sum_args(expr, function(v)
+                          return poly.degree(v)
     end)
   elseif kind(expr, '/') then
     return poly.degree(arg(expr, 1)) - poly.degree(arg(expr, 2))

@@ -52,11 +52,24 @@ function output.print_alg(u)
     elseif k == 'fn' then
       local a = lib.map(v, print_alg_rec, 0)
       return v[2]..'('..table.concat(a, ', ', 3)..')'
+    elseif k == '-' and lib.num_args(v) == 1 then
+      return '-'..print_alg_rec(lib.arg(v, 1))
+    elseif k == '^' then
+      local exp
+      if not lib.is_const(lib.arg(v, 2)) then
+        exp = '('..print_alg_rec(lib.arg(v, 2), 0)..')'
+      else
+        exp = print_alg_rec(lib.arg(v, 2))
+      end
+      return print_alg_rec(lib.arg(v, 1), operator.table['^'].infix.precedence)..'^'..exp
     end
 
     local o = operator.table[k]
+    if not o then
+      return 'ERR:'..(k or 'nil')
+    end
     local d = o and ((o.infix and 'infix') or (o.prefix and 'prefix') or (o.suffix and 'suffix'))
-    local p = o[d].precedence or 0
+    local p = (o and o[d].precedence) or 0
     local w = lib.map(v, print_alg_rec, p)
     local s = k == '*' and ' ' or k -- Print ' ' as multiplication
     local r = ''
