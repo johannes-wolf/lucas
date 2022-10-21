@@ -1,7 +1,11 @@
-local cmath = require 'cmath' -- FIXME: Remove or refresh
 local lib = require 'lib'
 
 local fraction = {}
+
+-- Naive GCD algorithm
+local function sgcd(a, b)
+  return (b == 0 and a) or sgcd(b, a % b)
+end
 
 -- Create normalized fraction
 ---@param numerator number  Fraction numerator
@@ -11,12 +15,12 @@ function fraction.make(numerator, denominator)
   assert(type(numerator) == 'number' and type(denominator) == 'number')
   assert(math.floor(numerator) == numerator and math.floor(denominator) == denominator)
 
-  if cmath.is_neg(denominator) then
-    numerator = cmath.neg(numerator)
-    denominator = cmath.neg(denominator)
+  if denominator < 0 then
+    numerator = -1 * numerator
+    denominator = -1 * denominator
   end
 
-  local gcd = cmath.gcd(numerator, denominator)
+  local gcd = sgcd(numerator, denominator)
   if gcd == 1 then
     if denominator == 1 then
       return {'int', numerator}
@@ -25,9 +29,9 @@ function fraction.make(numerator, denominator)
   end
 
   if gcd == denominator then
-    return {'int', cmath.div(numerator, denominator)}
+    return {'int', numerator / denominator}
   end
-  return {'frac', num = cmath.div(numerator, gcd), denom = cmath.div(denominator, gcd)}
+  return {'frac', num = numerator / gcd, denom = denominator / gcd}
 end
 
 -- Test fraction f for equality with num/denom
@@ -72,51 +76,6 @@ end
 function fraction.split(a)
   if fraction.isa(a) then
     return a.num, a.denom
-  end
-end
-
-function fraction.add(a, b)
-  if fraction.isa(a) then
-    if fraction.isa(b) then
-      return fraction.make(cmath.add(cmath.mul(a.num, b.denom), cmath.mul(b.num, a.denom)),
-                           cmath.mul(a.denom, b.denom))
-    else
-      return fraction.make(cmath.add(a.num, cmath.mul(a.denom, b)),
-                           a.denom)
-    end
-  else
-      return fraction.make(cmath.add(b.num, cmath.mul(b.denom, a)),
-                           b.denom)
-  end
-end
-
-function fraction.mul(a, b)
-  if fraction.isa(a) then
-    if fraction.isa(b) then
-      return fraction.make(cmath.mul(a.num, b.num),
-                           cmath.mul(a.denom, b.denom))
-    else
-      return fraction.make(cmath.mul(a.num, b),
-                           a.denom)
-    end
-  else
-    return fraction.make(cmath.mul(b.num, a),
-                         b.denom)
-  end
-end
-
-function fraction.div(a, b)
-  if fraction.isa(a) then
-    if fraction.isa(b) then
-      return fraction.make(cmath.mul(a.num, b.denom),
-                           cmath.mul(a.denom, b.num))
-    else
-      return fraction.make(a.num,
-                           cmath.mul(a.denom, b))
-    end
-  else
-    return fraction.make(b.num,
-                         cmath.mul(b.denom, a))
   end
 end
 

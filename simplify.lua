@@ -533,6 +533,7 @@ function simplify.fn(u)
 end
 
 function simplify.unit(u)
+  -- FIXME: Maybe do not simplify units by default
   if units.table[lib.unit(u)].value then
     return simplify.expr(units.table[lib.unit(u)].value)
   end
