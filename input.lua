@@ -2,6 +2,7 @@ local lexer = require 'lexer'
 local parser = require 'parser'
 local util = require 'util'
 local fraction = require 'fraction'
+local float = require 'fraction'
 local operator = require 'operator'
 
 local input = {}
@@ -12,14 +13,12 @@ function input.read_expression(str)
   local parselets = {}
 
   -- Parser for floats
-  --[[
   parselets['f'] = {
     prefix = function(_, token)
-      print('float: '..tonumber(token[1]))
+      -- TODO: Save floats as mantissa+exponent integers
       return float.make(tonumber(token[1]))
     end,
   }
-  ]]--
 
   -- Parser for integers and fractions ([c:]num:denom)
   parselets['n'] = {
@@ -108,8 +107,8 @@ function input.read_expression(str)
 
   implicit_multiply('id') -- a b   => a*b
   implicit_multiply('u')  -- a _u  => a*_u
-  implicit_multiply('n')  -- 2 3   => 2*3
-  --implicit_multiply('f')  -- 2 3   => 2*3
+  implicit_multiply('n')  -- 2 a   => 2*a
+  implicit_multiply('f')  -- 2.0 a => 2*a
   implicit_multiply('(')  -- a (b) => a*(b)
 
   return parser.parse(tokens, parselets)

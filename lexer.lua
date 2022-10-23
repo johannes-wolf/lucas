@@ -38,7 +38,7 @@ local function parse_number(s, i)
 end
 
 local function parse_float(s, i)
-  local ii, jj, text = s:find('^(%d*%.?%d+)', i)
+  local ii, jj, text = s:find('^(%d+%.%d+)', i)
   if ii then
     local _, sj, sci = get_sci_suffix(s, jj + 1)
     return ii, sj or jj, tonumber(text) * 10 ^ (sci or 0)
@@ -47,7 +47,7 @@ end
 
 local function parse_operator(s, i)
   local t = {
-    '+', '-', '*', '/', '^',
+    '+', '-', '*', '/', '^', '!',
     '<=', '<', '>=', '>', '=', '!=',
     'and', 'or', 'not'
   }
@@ -71,8 +71,8 @@ local function lex(str)
     {parse_identifier, 'id'},
     {parse_unit, 'u'},
     {parse_syntax, 's'},
-    {parse_number, 'n'},
     {parse_float, 'f'},
+    {parse_number, 'n'},
   }
 
   local t = {}
