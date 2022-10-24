@@ -32,6 +32,10 @@ local function format_unit(s)
   return '_'..tostring(s[2])
 end
 
+local function format_bool(s)
+  return s[2] and 'true' or 'false'
+end
+
 function output.print_alg(u)
   local function print_alg_rec(v, prec)
     if type(v) == 'string' then
@@ -41,10 +45,12 @@ function output.print_alg(u)
     local k = lib.kind(v)
     if k == 'int' then
       return format_int(v)
-    elseif k == 'float' then
+    elseif k == 'real' then
       return format_float(v)
     elseif k == 'frac' then
       return format_frac(v)
+    elseif k == 'bool' then
+      return format_bool(v)
     elseif k == 'sym' then
       return format_sym(v)
     elseif k == 'unit' then
@@ -112,10 +118,12 @@ function output.print_sexp(u)
   local k = lib.kind(u)
   if k == 'int' then
     return format_int(u)
-  elseif k == 'float' then
+  elseif k == 'real' then
     return format_float(u)
   elseif k == 'frac' then
     return format_frac(u)
+  elseif k == 'bool' then
+    return format_bool(u)
   elseif k == 'sym' then
     return format_sym(u)
   elseif k == 'unit' then

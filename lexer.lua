@@ -7,7 +7,7 @@ local function parse_syntax(s, i)
 end
 
 local function parse_identifier(s, i)
-  return s:find('^([%a][_%w]*)', i)
+  return s:find('^([%a][._%w]*[_%w]*)', i)
 end
 
 local function parse_unit(s, i)
@@ -47,9 +47,13 @@ end
 
 local function parse_operator(s, i)
   local t = {
-    '+', '-', '*', '/', '^', '!',
-    '<=', '<', '>=', '>', '=', '!=',
-    'and', 'or', 'not'
+    ':=',
+    '|',
+    'and', 'or', 'not',
+    '=', '!=',
+    '<=', '<', '>=', '>',
+    '+', '-', '*', '/', '^',
+    '!',
   }
 
   for _, text in ipairs(t) do

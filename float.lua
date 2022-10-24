@@ -5,7 +5,7 @@ local float = {}
 function float.make(v)
   if type(v) == 'number' then
     if math.floor(v) ~= v then
-      return {'float', v}
+      return {'real', v}
     else
       return {'int', math.floor(v)}
     end
@@ -26,7 +26,7 @@ function float.force(v)
   elseif lib.kind(v, 'int') then
     v = v[2]
   end
-  return {'float', v}
+  return {'real', v}
 end
 
 function float.is_zero(v)

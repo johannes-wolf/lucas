@@ -13,7 +13,6 @@ end
 ---@return table  Fraction object
 function fraction.make(numerator, denominator)
   assert(type(numerator) == 'number' and type(denominator) == 'number')
-  assert(math.floor(numerator) == numerator and math.floor(denominator) == denominator)
 
   if denominator < 0 then
     numerator = -1 * numerator

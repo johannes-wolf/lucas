@@ -2,26 +2,27 @@ local util = require 'util'
 
 local base = {}
 
--- Functions for expression creation
-function base.make_op(id, ...)
-  return {id, ...}
+---@alias Expression table
+---@alias Kind 'bool'|'int'|'frac'|'real'|'sym'|'unit'|'fn'
+
+function base.safe_int(val)
+  if base.kind(val, 'int') then return val[2] end
 end
 
-function base.make_sym(id)
-  return {'sym', id}
+function base.safe_sym(val)
+  if base.kind(val, 'sym') then return base.sym(val) end
 end
 
-function base.make_fn(id, ...)
-  return {'fn', id, ...}
-end
-
-function base.make_unit(id)
-  return {'unit', id}
+function base.safe_fn(val)
+  if base.kind(val, 'fn') then return base.fn(val) end
 end
 
 -- Get (or compare) expression kind
+---@param expr Expression
+---@return boolean|Kind
 function base.kind(expr, ...)
-  if not expr then return nil end
+  if not expr then return false end
+  --assert(type(expr) == 'table') -- THERE IS A BUG IN COMPARE WHICH PASSES STRINGS TO KIND
   if select('#', ...) > 0 then
     return util.set.contains({...}, expr[1])
   end
@@ -29,7 +30,7 @@ function base.kind(expr, ...)
 end
 
 function base.is_const(u)
-  return base.kind(u, 'int', 'float', 'frac')
+  return base.kind(u, 'int', 'real', 'frac', 'bool')
 end
 
 -- Get (or compare) expression function name (if kind = 'fn')
@@ -66,7 +67,7 @@ end
 
 -- Get number of arguments
 function base.num_args(u)
-  if base.kind(u, 'int', 'frac', 'float', 'unit', 'sym') then return 0 end
+  if base.kind(u, 'int', 'frac', 'real', 'bool', 'unit') then return 0 end
   return u and #u - base.arg_offset(u) or 0
 end
 
@@ -76,8 +77,8 @@ function base.arg(u, n)
 end
 
 -- Get arguments as list
-function base.get_args(u)
-  return util.list.slice(u, 1 + base.arg_offset(u))
+function base.get_args(u, start)
+  return util.list.slice(u, (start or 1) + base.arg_offset(u))
 end
 
 -- Apply function on each operand/argument
@@ -101,6 +102,41 @@ function base.mapi(u, fn, ...)
   end
 end
 
+-- Compare tables
+function base.compare(u, v)
+  local function cmp(a, b)
+    if base.is_const(a) and base.is_const(b) then
+      local calc = require 'calc'
+      return calc.is_true(calc.eq(a, b))
+    elseif base.kind(a, 'sym') and base.kind(b, 'sym') then
+      return base.sym(a) == base.sym(b)
+    elseif base.kind(a, 'unit') and base.kind(b, 'unit') then
+      return base.unit(a) == base.unit(b)
+    elseif base.kind(a, 'fn') and base.kind(b, 'fn') then
+      if base.fn(a) == base.fn(b) and base.num_args(a) == base.num_args(b) then
+        for i = 1, base.num_args(a) do
+          if not base.compare(base.arg(a, i), base.arg(b, i)) then
+            return false
+          end
+        end
+        return true
+      end
+      return false
+    elseif base.kind(a) == base.kind(b) and base.num_args(a) == base.num_args(b) then
+      for i = 1, base.num_args(a) do
+        if not base.compare(base.arg(a, i), base.arg(b, i)) then
+          return false
+        end
+      end
+      return true
+    else
+      return false
+    end
+  end
+
+  return cmp(u, v)
+end
+
 -- Apply summation function on operands and return the result
 function base.sum_args(u, fn, ...)
   local s = 0
@@ -113,7 +149,7 @@ function base.sum_args(u, fn, ...)
 end
 
 -- Call function fn for each argument of u
----@param u table      Expression
+---@param u Expression Expression
 ---@param fn function  Predicate
 ---@return boolean
 function base.all_args(u, fn, ...)
@@ -128,8 +164,8 @@ function base.all_args(u, fn, ...)
 end
 
 -- Call function fn for each argument of u
----@param u table      Expression
----@param fn function  Predicate
+---@param u Expression  Expression
+---@param fn function   Predicate
 ---@return boolean
 function base.any_arg(u, fn, ...)
   if base.num_args(u) > 0 then
@@ -140,18 +176,6 @@ function base.any_arg(u, fn, ...)
     end
   end
   return false
-end
-
--- Is natural number
-function base.is_natnum(expr)
-  if base.kind(expr, 'int') then
-    return expr[2] >= 0
-  end
-end
-
--- Return if expr is a primitive
-function base.is_prim(expr) -- TODO: Remove me
-  return base.kind(expr, 'int', 'frac', 'float') -- Primary
 end
 
 return base

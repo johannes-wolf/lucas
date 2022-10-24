@@ -1,6 +1,7 @@
 local lib = require 'lib'
+local dbg = require 'dbg'
 
-local units = { table = {} }
+local units = { table = {}, ordered = {} }
 
 local function pow10(n)
   return {'^', {'int', 10}, {'int', n}}
@@ -47,6 +48,7 @@ function units.def_unit(sym, name, val, base)
     value = val,
     base = base,
   }
+  units.ordered = sym
 end
 
 function units.def_si_unit(sym, name, val)
@@ -98,9 +100,15 @@ function units.compile()
   local input = require 'input'
   local simplify = require 'simplify'
 
-  for _, u in pairs(units.table) do
+  for _, k in ipairs(units.ordered) do
+    local u = units.table[k]
     if type(u.value) == 'string' then
-      u.value = simplify.expr(input.read_expression(u.value))
+      local ok, err = pcall(function()
+          u.value = simplify.expr(input.read_expression(u.value))
+      end)
+      if not ok then
+        print('Failed to compile unit '..k..'=>'..dbg.dump(u.value)..' error: '..err)
+      end
     end
   end
 

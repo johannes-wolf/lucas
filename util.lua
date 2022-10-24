@@ -90,7 +90,12 @@ end
 
 local tab = {}
 
-function tab.compare(a, b)
+-- Compare two tables
+---@param a table       Table a
+---@param b table       Table b
+---@param fn function?  Predicate function
+---@return boolean
+function tab.compare(a, b, fn)
   if type(a) == type(b) and type(a) == 'table' then
     if #a ~= #b then return false end
     for k, v in pairs(a) do
@@ -101,7 +106,7 @@ function tab.compare(a, b)
     end
     return true
   end
-  return a == b
+  if fn then return fn(a, b) else return a == b end
 end
 
 function tab.clone(a)
