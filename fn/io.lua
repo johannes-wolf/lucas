@@ -1,30 +1,40 @@
 local fn = require 'functions'
-local memory = require 'memory'
-local output = require 'output'
+local Env = require 'env'
+
+fn.def_lua('mem.reset', 'unpack', function()
+  Env.global:reset()
+  return {'bool', true}
+end)
+
+fn.def_lua('mem.show', 'unpack', function()
+  print(Env.global:print())
+  return {'bool', true}
+end)
 
 fn.def_lua('mem.load', 'unpack', function()
   local eval = require 'eval'
   local input = require 'input'
 
-  for line in io.lines('.lucas_memory') do
-    eval.eval(input.read_expression(line))
+  local ok, err = pcall(function()
+      for line in io.lines('.lucas_memory') do
+        eval.eval(input.read_expression(line))
+      end
+  end)
+
+  if not ok then
+    print('error: '..tostring(err))
   end
 
-  return {'bool', true}
+  return {'bool', ok}
 end)
 
 fn.def_lua('mem.store', 'unpack', function()
   local f = io.open('.lucas_memory', 'w+')
-  for k, v in pairs(memory.vars) do
-    f:write(k, ':=', output.print_alg(v), '\n')
+  if f then
+    f:write(Env.global:print())
+    f:close()
+    return {'bool', true}
   end
 
-  for _, v in pairs(memory.fn) do
-    for _, r in ipairs(v.rules or {}) do
-      f:write(output.print_alg(r.pattern), ':=', output.print_alg(r.replacement), '\n')
-    end
-  end
-
-  f:close()
-  return {'bool', true}
+  return {'bool', false}
 end)

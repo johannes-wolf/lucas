@@ -2,8 +2,7 @@ local input = require 'input'
 local output = require 'output'
 local util = require 'util'
 local fraction = require 'fraction'
-local float = require 'float'
-local calc = require 'calc'
+local Env = require 'env'
 local simplify = require 'simplify'
 local units = require 'units'
 local functions = require 'functions'
@@ -59,17 +58,17 @@ while true do
   io.write('['..(ok and 'OK ' or 'ERR')..']> ')
 
   local str = io.read('l')
-  ok, err = pcall(function()
+  --ok, err = pcall(function()
       local expr = input.read_expression(str)
       if expr then
         --print('input:        '..output.print_sexp(expr))
 
-        local simpl = eval.eval(expr)
+        local simpl = eval.eval(expr, Env.global)
         --print('simplified:   '..output.print_sexp(simpl))
         print('     = '..output.print_alg(simpl))
       end
-  end)
+  --end)
   if not ok then
-    print('error: '..err)
+    --print('error: '..(err or 'ok'))
   end
 end

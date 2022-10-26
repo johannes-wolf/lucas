@@ -1,7 +1,6 @@
 local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
-local float = require 'float'
 local dbg = require 'dbg'
 
 local units = require 'units'
@@ -12,7 +11,7 @@ local simplify = {}
 
 local function eq_const(u, n)
   if lib.is_const(u) then
-    return calc.is_true(calc.eq(u, {'int', n}))
+    return lib.safe_bool(calc.eq(u, {'int', n}))
   end
   return false
 end
@@ -213,6 +212,7 @@ function simplify.rational_number(u)
   elseif lib.kind(u, 'frac') then
     return u -- TODO: Either remove this function, or do not simplify fractions by default
   end
+  return u
 end
 
 function simplify.rne_rec(u)
@@ -222,7 +222,7 @@ function simplify.rne_rec(u)
   if k == 'int' or k == 'real' then
     return u
   elseif k == 'frac' then
-    if u.denom == 0 then
+    if u[3] == 0 then
       return 'undef'
     else
       return u
@@ -255,11 +255,11 @@ function simplify.rne_rec(u)
         end
       end
     elseif lib.kind(u, '^') then
-      local v = simplify.rne_rec(u[2])
+      local v = simplify.rne_rec(lib.arg(u, 1))
       if v == 'undef' then
         return 'undef'
       end
-      return calc.power(v, u[3])
+      return calc.pow(v, lib.arg(u, 2))
     end
   end
 end
@@ -283,19 +283,19 @@ function simplify.product_rec(l)
   if #l == 2 and lib.kind(a) ~= '*' and lib.kind(b) ~= '*' then
     if lib.is_const(a) and lib.is_const(b) then
       local r = simplify.rne({'*', a, b})
-      if eq_const(r, 1) then
+      if calc.eq(r, calc.ONE) then
         return {}
       else
         return {r}
       end
-    elseif eq_const(a, 1) then
+    elseif calc.eq(a, calc.ONE) then
       return {b}
-    elseif eq_const(b, 1) then
+    elseif calc.eq(b, calc.ONE) then
       return {a}
     elseif lib.compare(base(a), base(b)) then
       local s = simplify.sum({'+', exponent(a), exponent(b)})
       local p = simplify.power({'^', base(a), s})
-      if eq_const(p, 1) then
+      if calc.eq(p, calc.ONE) then
         return {}
       else
         return {p}
@@ -418,62 +418,26 @@ function simplify.sum(u)
   end
 end
 
--- Simplify power a^b with b of type int
----@param expr table
----@return table
-function simplify.int_power(expr)
-  assert(lib.kind(expr, '^'))
-  assert(lib.kind(expr[3], 'int'))
-
-  local b, e = expr[2], expr[3]
-  local n = e[2] -- e is of lib.kind 'int'
-  if lib.kind(b, 'int', 'frac') then -- SINTPOW-1
-    return simplify.rne({'^', b, e})
-  elseif n == 0 then -- SINTPOW-2
-    return {'int', 1}
-  elseif n == 1 then -- SINTPOW-3
-    return b
-  elseif lib.kind(b, '^') then -- SINTPOW-4
-    local r, s = lib.arg(b, 1), lib.arg(b, 2)
-    local p = simplify.product({'*', s, e})
-    if lib.kind(p, 'int') then
-      return simplify.int_power({'^', r, p})
-    else
-      return {'^', r, p}
-    end
-  elseif lib.kind(b, '*') then -- SINTPOW-5
-    local r = lib.map(b, function(arg)
-                        return simplify.int_power({'^', arg, e})
-    end)
-    return simplify.product(r)
-  else -- SINTPOW-6
-    return {'^', b, e}
-  end
-end
-
 -- Simplify power a^b
 ---@param expr table
 ---@return table
 function simplify.power(expr)
   assert(lib.kind(expr, '^'))
 
-  local b, e = base(expr), exponent(expr)
-  if b == 'undef' or e == 'undef' then -- SPOW-1
-    return 'undef'
+  local b, e = expr[2], expr[3]
+  if lib.is_const(b) then
+    return simplify.rne({'^', b, e})
+  elseif lib.kind(b, '^') then
+    local r, s = lib.arg(b, 1), lib.arg(b, 2)
+    local p = simplify.product({'*', s, e})
+    return simplify.power({'^', r, p})
+  elseif lib.kind(b, '*') then
+    local r = lib.map(b, function(arg)
+                        return simplify.power({'^', arg, e})
+    end)
+    return simplify.product(r)
   else
-    if calc.is_zero(b) then -- SPOW-2
-      if true then -- FIXME: is positive?
-        return {'int', 0}
-      else
-        return 'undef'
-      end
-    elseif eq_const(b, 1) then -- SPOW-3
-      return {'int', 1}
-    elseif lib.kind(e, 'int') then -- SPOW-4
-      return simplify.int_power(expr)
-    else -- SPOW-5
-      return expr
-    end
+    return {'^', b, e}
   end
 end
 
@@ -515,16 +479,16 @@ function simplify.logical(u)
   local a, b = lib.arg(u, 1), lib.arg(u, 2)
   if lib.kind(u, 'not') then
     if lib.is_const(a) then
-      return {'bool', not calc.is_true(a)}
+      return {'bool', not lib.safe_bool(a, false)}
     end
   elseif lib.kind(u, 'and') then
     if lib.is_const(a) and lib.is_const(b) then
-      return {'bool', calc.is_true(a) and calc.is_true(b)}
+      return {'bool', lib.safe_bool(a, false) and lib.safe_bool(b, false)}
     end
   elseif lib.kind(u, 'or') then
-    if (lib.is_const(a) and calc.is_true(a)) or
-       (lib.is_const(b) and calc.is_true(b)) then
-      return {'bool', true}
+    if (lib.is_const(a) and lib.safe_bool(a, false)) or
+       (lib.is_const(b) and lib.safe_bool(b, false)) then
+      return calc.TRUE
     end
   end
   return u
@@ -533,7 +497,18 @@ end
 function simplify.relation(u)
   assert(lib.num_args(u) == 2)
 
+  -- Transform a<b<c => a<b and b<c if not mixing <> and =
   local a, b = lib.arg(u, 1), lib.arg(u, 2)
+  if lib.is_relop(a) and not lib.is_relop(b) then
+    if lib.kind(a, '=', '!=') == lib.kind(u, '=', '!=') then
+      local ab = lib.arg(a, 2)
+      return simplify.expr({'and', simplify.expr(a),
+                            simplify.expr({lib.kind(u), ab, b})})
+    end
+  end
+
+  u = lib.map(u, simplify.expr)
+
   if lib.is_const(a) and lib.is_const(b) then
     if lib.kind(u, '<') then
       return calc.lt(a, b)
@@ -550,16 +525,18 @@ function simplify.relation(u)
     else
       error('unimplemented')
     end
-  else
+  elseif lib.kind(a, 'sym') and lib.kind(b, 'sym') then
     if lib.compare(a, b) then
       if lib.kind(u, '=', '>=', '<=') then
-        return {'bool', true}
+        return calc.TRUE
       elseif lib.kind(u, '<', '>', '!=') then
-        return {'bool', false}
+        return calc.FALSE
       end
     else
       if lib.kind(u, '!=') then
-        return {'bool', true}
+        return calc.TRUE
+      elseif lib.kind(u, '=') then
+        return calc.FALSE
       end
     end
   end
@@ -580,6 +557,8 @@ function simplify.expr(expr, env)
     return simplify.unit(expr)
   elseif lib.kind(expr, 'frac') then
     return simplify.rational_number(expr)
+  elseif lib.is_relop(expr) then
+    return simplify.relation(expr)
   else
     local v = lib.map(expr, simplify.expr, env)
     local k = lib.kind(v)

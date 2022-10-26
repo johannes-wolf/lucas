@@ -15,7 +15,7 @@ local function format_float(i)
 end
 
 local function format_frac(f)
-  return string.format("%d:%d", f.num, f.denom)
+  return string.format("%d:%d", f[2], f[3])
 end
 
 local function format_sym(s)

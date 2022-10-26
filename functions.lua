@@ -1,4 +1,3 @@
-local float = require 'float'
 local lib = require 'lib'
 local units = require 'units'
 local calc = require 'calc'
@@ -138,10 +137,9 @@ function functions.call(call, env)
   assert(lib.kind(call, 'fn'))
 
   local eval = require 'eval'
-  local memory = require 'memory'
 
   local name = lib.fn(call)
-  local f = memory.recall_fn(name) or functions.table[name]
+  local f = env:get_fn(name)
   if f then
     if not get_attrib(f, 'no_eval_args') then
       call = lib.map(call, eval.eval, env)

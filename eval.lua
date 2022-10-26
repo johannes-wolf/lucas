@@ -1,5 +1,5 @@
 local lib = require 'lib'
-local memory = require 'memory'
+local Env = require 'env'
 local simplify = require 'simplify'
 local functions = require 'functions'
 local pattern = require 'pattern'
@@ -8,11 +8,15 @@ local dbg = require 'dbg'
 local eval = {}
 
 function eval.store(expr, env)
+  env = Env.global
+
   local a, b = lib.arg(expr, 1), lib.arg(expr, 2)
   if lib.kind(a, 'sym') then
-    memory.store(a, b)
+    env:set_var(lib.sym(a), b)
   elseif lib.kind(a, 'fn') then
-    memory.store_fn(a, b)
+    env:set_fn(a, b)
+  elseif lib.kind(a, 'unit') then
+    env:set_unit(lib.unit(a), b)
   else
     return 'undef'
   end
@@ -29,21 +33,20 @@ function eval.fn(expr, env)
 end
 
 function eval.sym(expr, env)
-  local s = lib.sym(expr)
-  local v = nil
+  local s = lib.safe_sym(expr)
   if env then
-    v = eval.env_recall(env, s)
-    if v then return v end
-  end
-
-  v = memory.recall(s)
-  if v then
-    return v
+    local v = env:get_var(s)
+    if v then return v.value end
   end
   return expr
 end
 
 function eval.unit(expr, env)
+  local u = lib.safe_unit(expr)
+  if env then
+    local v = env:get_unit(u)
+    if v then return v.value end
+  end
   return expr
 end
 
@@ -51,7 +54,7 @@ end
 function eval.with_assign(expr, env)
   local sym, replacement = lib.arg(expr, 1), lib.arg(expr, 2)
   if lib.kind(sym, 'sym') then
-    env.vars[lib.sym(sym)] = replacement
+    env:set_var(lib.sym(sym), replacement)
   else
     error('not implemented')
   end
@@ -66,7 +69,7 @@ function eval.with_relation(expr, env)
 end
 
 function eval.with(expr, env)
-  local sub_env = eval.make_env(env)
+  local sub_env = Env(env)
   eval.with_relation(lib.arg(expr, 2), sub_env)
 
   -- First evaluation with normal env
@@ -97,25 +100,9 @@ function eval.eval_rec(expr, env)
   end
 end
 
-function eval.make_env(parent)
-  return {
-    parent = parent,
-    vars = {},
-    fn = {},
-  }
-end
-
-function eval.env_recall(env, sym)
-  assert(type(env) == 'table' and type(sym) == 'string')
-
-  if env and sym then
-    return env.vars[sym] or eval.env_recall(env.parent, sym)
-  end
-end
-
 -- Expression evaluation entry-point
----@param expr Expression
----@param env  table?      Environment injection
+---@param expr Expression  Expression
+---@param env  Env?        Environment injection
 ---@return Expression
 function eval.eval(expr, env)
   return simplify.expr(eval.eval_rec(simplify.expr(expr, env), env), env)

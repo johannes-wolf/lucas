@@ -1,25 +1,20 @@
 local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
-local dbg = require 'dbg'
+local Env = require 'env'
 
 local pattern = {}
 
 ---@alias Variables table<string, table>
 
-local function match_head(expr, p)
-  if not expr or not p then return false end
+local function match_head(left, right)
+  if not left or not right then return false end
 
-  if lib.is_const(expr) and lib.is_const(p) then
-    return lib.compare(expr, p)
+  if lib.is_const(left) and lib.is_const(right) then
+    return lib.compare(left, right)
   end
 
-  local n = lib.arg_offset(p)
-  for i = 1, n do
-    if expr[i] ~= p[i] then return false end
-  end
-
-  return true
+  return util.table.compare_slice(left, right, 1, lib.arg_offset(right))
 end
 
 local function match_rec(expr, parent, index, p, quote, vars)
@@ -29,12 +24,12 @@ local function match_rec(expr, parent, index, p, quote, vars)
   local function eval_bool(cnd)
     local eval = require 'eval'
 
-    local env = eval.make_env()
+    local env = Env()
     for k, v in pairs(vars) do
       env.vars[k] = v.expr
     end
 
-    return calc.is_true(eval.eval(cnd, env))
+    return lib.safe_bool(eval.eval(cnd, env), false)
   end
 
   if not quote then
@@ -64,47 +59,38 @@ local function match_rec(expr, parent, index, p, quote, vars)
 
   if not match_head(expr, p) then return false end
 
-  if lib.kind(expr, '+', '*') and (lib.num_args(expr) > 2 or lib.num_args(p) > 2) then
-    -- Split n-arg +/* into binary operator
-    local k = lib.kind(expr)
+  expr = lib.make_binary_operator(expr)
+  p = lib.make_binary_operator(p)
 
-    local split_p = p
-    if lib.num_args(p) > 2 then
-      split_p = {k, lib.arg(p, 1), util.list.join({k}, lib.get_args(p, 2))}
-    end
+  if lib.num_args(expr) ~= lib.num_args(p) then return false end
 
-    local split_e = expr
-    if lib.num_args(expr) > 2 then
-      split_e = {k, lib.arg(expr, 1), util.list.join({k}, lib.get_args(expr, 2))}
-    end
-
-    return match_rec(split_e, expr, 1, split_p, quote, vars)
-  else
-    if lib.num_args(expr) ~= lib.num_args(p) then return false end
-
-    for i = 1, lib.num_args(p) do
-      if not match_rec(lib.arg(expr, i), expr, i, lib.arg(p, i), quote, vars) then
-        return false
-      end
+  for i = 1, lib.num_args(p) do
+    if not match_rec(lib.arg(expr, i), expr, i, lib.arg(p, i), quote, vars) then
+      return false
     end
   end
 
   return true
 end
 
+-- Replace symbols of vars in expr with their replacement expression
+---@param expr  Expression   Input expression
+---@param quote boolean      Quote (verbatim) mode
+---@param vars  Variables[]  Variables
+---@return      Expression
 local function substitute_rec(expr, quote, vars)
   if not quote then
     if lib.kind(expr, 'fn') then
       local f = lib.fn(expr)
       if f == 'quote' then
-        return expr --lib.arg(expr, 1)
+        return lib.map(lib.arg(expr, 1), substitute_rec, true, vars)
       end
     end
 
     if lib.kind(expr, 'sym') then
       local s = lib.sym(expr)
       if vars[s] then
-        expr = util.table.clone(vars[s].expr)
+        return util.table.clone(vars[s].expr)
       end
     end
   end

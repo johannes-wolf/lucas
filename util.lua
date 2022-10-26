@@ -109,6 +109,28 @@ function tab.compare(a, b, fn)
   if fn then return fn(a, b) else return a == b end
 end
 
+-- Compare two lists with an optional range
+---@param a     table    Left table
+---@param b     table    Right table
+---@param start number?  Start index (1)
+---@param stop  number?  Stop index
+function tab.compare_slice(a, b, start, stop)
+  start = start or 1
+  stop = stop or #a
+
+  if #a < stop or #b < stop then
+    return false
+  end
+
+  for i = start, stop do
+    if not tab.compare(a[i], b[i]) then
+      return false
+    end
+  end
+
+  return true
+end
+
 function tab.clone(a)
   local function clone_rec(x)
     if type(x) == 'table' then

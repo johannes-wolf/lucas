@@ -48,7 +48,7 @@ function units.def_unit(sym, name, val, base)
     value = val,
     base = base,
   }
-  units.ordered = sym
+  table.insert(units.ordered, sym)
 end
 
 function units.def_si_unit(sym, name, val)
