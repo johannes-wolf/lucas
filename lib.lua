@@ -15,23 +15,28 @@ local base = {}
 ---| 'unit'
 ---| 'fn'
 
+---@reutrn boolean|nil
 function base.safe_bool(val, def)
   if base.kind(val, 'bool') then return val[2] end
   return def
 end
 
+---@reutrn number|nil
 function base.safe_int(val)
   if base.kind(val, 'int') then return val[2] end
 end
 
+---@reutrn string|nil
 function base.safe_sym(val)
   if base.kind(val, 'sym') then return base.sym(val) end
 end
 
+---@reutrn string|nil
 function base.safe_unit(val)
   if base.kind(val, 'unit') then return base.unit(val) end
 end
 
+---@reutrn string|nil
 function base.safe_fn(val)
   if base.kind(val, 'fn') then return base.fn(val) end
 end

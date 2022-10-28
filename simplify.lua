@@ -621,21 +621,26 @@ function simplify.relation(u)
   return u
 end
 
-function simplify.vector_operator(expr, env)
-  local k = lib.kind(expr)
-  for i = 1, lib.num_args(expr) do
+function simplify.with_assignment(u, env)
+  return lib.map(u, simplify.expr, env)
+end
 
+function simplify.with_condition(u, env)
+  if lib.kind(u, 'and') then
+    return lib.map(u, simplify.with_condition, env)
+  elseif lib.kind(u, '=') then
+    return simplify.with_assignment(u, env)
   end
 end
 
-local function has_vector_operands(u)
-  local n = 0
-  for i = 1, lib.num_args(u) do
-    if lib.kind(lib.arg(u, i), 'vec') then
-      n = n + 1
-    end
+function simplify.with(u, env)
+  local a, b = lib.arg(u, 1), lib.arg(u, 2)
+  a = simplify.expr(a, env)
+  b = simplify.with_condition(b, env)
+  if not b or lib.is_const(b) then
+    return a
   end
-  return n > 0 and n
+  return {'|', a, b}
 end
 
 function simplify.expr(expr, env)
@@ -649,6 +654,8 @@ function simplify.expr(expr, env)
     return simplify.rational_number(expr)
   elseif lib.is_relop(expr) then
     return simplify.relation(expr)
+  elseif lib.kind(expr, '|') then
+    return simplify.with(expr, env)
   else
     local v = lib.map(expr, simplify.expr, env)
     local k = lib.kind(v)

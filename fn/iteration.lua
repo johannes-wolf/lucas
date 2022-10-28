@@ -8,36 +8,39 @@ end
 
 -- nest(f, expr, n)
 --   Returns f applied n times to expr
-fn.def_lua_symb('nest', 'unpack', function(f, expr, n)
-  f = lib.safe_sym(f) or lib.safe_fn(f)
-  n = lib.safe_int(n)
+fn.def_lua_symb('nest', {{name = 'fn'}, {name = 'x'}, {name = 'n'}},
+function(a, env)
+  local f = lib.safe_sym(a.fn) or lib.safe_fn(a.fn)
+  local n = lib.safe_int(a.n)
 
-  if not f or not n or not expr then
+  if not f or not n or not a.x then
     return 'undef'
   end
 
+  local r = a.x
   for _ = 1, n do
-    expr = make_call(f, expr)
+    r = make_call(f, r)
   end
-  return expr
+  return r
 end)
 
 -- iter(expr, var, start, n)
 --   Calculates expr n times with symbol var set to the last result or start.
-fn.def_lua_symb('iter', 'unpack', function(expr, var, start, n, en) -- TODO TABLE ARGS
+fn.def_lua_symb('iter', {{name = 'fn'}, {name = 'var'}, {name = 'start'}, {name = 'n'}},
+function(a, env)
   local eval = require 'eval'
   local pattern = require 'pattern'
 
-  var = lib.safe_sym(var)
-  n = lib.safe_int(n)
+  local var = lib.safe_sym(a.var)
+  local n = lib.safe_int(a.n)
 
-  if not expr or not var or not start or not n or n < 1 then
+  if not a.fn or not var or not a.start or not n or n < 1 then
     return 'undef'
   end
 
-  local res = start
+  local res = a.start
   for _ = 1, n do
-    res = eval.eval(pattern.substitute_var(expr, var, res), env)
+    res = eval.eval(pattern.substitute_var(a.fn, var, res), env)
   end
   return res
 end)
