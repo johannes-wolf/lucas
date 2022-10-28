@@ -3,11 +3,12 @@ local lib = require 'lib'
 
 ---@class Env
 local Env = Class('Env')
-function Env:init(parent)
+function Env:init(parent, mode)
   if parent ~= 'clean' then
     self.parent = parent or Env.global
   end
 
+  self.approx = mode == 'approx'
   self.vars = {}
   self.fn = {}
   self.units = {}
@@ -76,6 +77,7 @@ end
 
 -- Reset all (localy) stored information
 function Env:reset()
+  self.approx = false
   self.vars = {}
   self.fn = {}
   self.units = {}
@@ -102,6 +104,11 @@ function Env:print()
 end
 
 Env.global = Env('clean')
+
+Env.global.get_var = function(self, name)
+  local vars = require 'var'
+  return self.vars[name] or vars.table[name]
+end
 
 Env.global.get_fn = function(self, name)
   local functions = require 'functions'

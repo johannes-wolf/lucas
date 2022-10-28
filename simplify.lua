@@ -365,19 +365,19 @@ function simplify.sum_rec(l)
   if #l == 2 and lib.kind(a) ~= '+' and lib.kind(b) ~= '+' then
     if lib.is_const(a) and lib.is_const(b) then
       local r = simplify.rne({'+', a, b})
-      if calc.is_zero(r) then
+      if calc.is_zero_p(r) then
         return {}
       else
         return {r}
       end
-    elseif calc.is_zero(a) then
+    elseif calc.is_zero_p(a) then
       return {b}
-    elseif calc.is_zero(b) then
+    elseif calc.is_zero_p(b) then
       return {a}
     elseif lib.compare(term(a), term(b)) then
       local s = simplify.sum({'+', const(a), const(b)})
       local p = simplify.product({'*', s, term(a)})
-      if calc.is_zero(p) then
+      if calc.is_zero_p(p) then
         return {}
       else
         return {p}
@@ -488,7 +488,7 @@ function simplify.difference(u)
 end
 
 function simplify.factorial(u)
-  error('not implemented')
+  return calc.factorial(lib.arg(u, 1))
 end
 
 function simplify.fn(u, env)

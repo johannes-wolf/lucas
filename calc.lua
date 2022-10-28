@@ -159,17 +159,30 @@ function calc.sign(n)
   end
 end
 
-function calc.is_zero(n)
+-- Returns true if n is zero
+function calc.is_zero_p(n)
   return calc.sign(n) == 0
 end
 
+-- Returns true if n is positive or negative infinity.
 function calc.is_inf_p(n)
   return lib.safe_sym(n) == 'inf' or
          lib.safe_sym(n) == 'ninf'
 end
 
+-- Returns true if n is NAN.
 function calc.is_nan_p(n)
   return lib.safe_sym(n) == 'nan'
+end
+
+-- Returns true if n is a natural number. Returns true for 0 if with_zero is set.
+function calc.is_natnum_p(n, with_zero)
+  n = lib.safe_int(n)
+  if with_zero then
+    return n and n >= 0
+  else
+    return n and n > 0
+  end
 end
 
 local function make_compat_fractions(a, b)
@@ -271,8 +284,8 @@ local function sum_reals(a, b)
 end
 
 function calc.sum(a, b)
-  if calc.is_zero(a) then return b end
-  if calc.is_zero(b) then return a end
+  if calc.is_zero_p(a) then return b end
+  if calc.is_zero_p(b) then return a end
 
   a = int_to_fraction(a)
   b = int_to_fraction(b)
@@ -311,7 +324,7 @@ local function mul_reals(a, b)
 end
 
 function calc.product(a, b)
-  if calc.is_zero(a) or calc.is_zero(b) then
+  if calc.is_zero_p(a) or calc.is_zero_p(b) then
     return {'int', 0}
   end
 
@@ -347,9 +360,9 @@ local function div_reals(a, b)
 end
 
 function calc.quotient(a, b)
-  if calc.is_zero(b) then
+  if calc.is_zero_p(b) then
     return 'undef'
-  elseif calc.is_zero(a) then
+  elseif calc.is_zero_p(a) then
     return {'int', 0}
   end
 
@@ -414,12 +427,12 @@ function calc.pow(a, b)
     return b
   elseif calc.is_inf_p(a) then
     return a
-  elseif calc.is_zero(a) then
+  elseif calc.is_zero_p(a) then
     return calc.pow_to_zero(b)
   elseif lib.safe_bool(calc.eq(a, calc.ONE)) or
          lib.safe_bool(calc.eq(b, calc.ONE)) then
     return a
-  elseif calc.is_zero(b) then
+  elseif calc.is_zero_p(b) then
     return {'int', 1}
   else
     if lib.kind(b, 'int') then
@@ -443,6 +456,25 @@ function calc.pow(a, b)
   end
 
   return calc.pow_symbolic(a, b)
+end
+
+function calc.factorial_symbolic(u)
+  return {'!', u}
+end
+
+function calc.factorial(u)
+  if calc.is_natnum_p(u, true) then
+    local n = lib.safe_int(u)
+    local r = 1
+    for i = 1, n do
+      r = r * i
+    end
+    return {'int', r}
+  elseif lib.is_const(u) then
+    return 'undef'
+  end
+
+  return calc.factorial_symbolic(u)
 end
 
 return calc

@@ -36,7 +36,7 @@ function eval.sym(expr, env)
   local s = lib.safe_sym(expr)
   if env then
     local v = env:get_var(s)
-    if v then return v.value end
+    if v then return (env.approx and v.approx) or v.value end
   end
   return expr
 end

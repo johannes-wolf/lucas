@@ -24,7 +24,7 @@ end)
 
 -- iter(expr, var, start, n)
 --   Calculates expr n times with symbol var set to the last result or start.
-fn.def_lua_symb('iter', 'unpack', function(expr, var, start, n)
+fn.def_lua_symb('iter', 'unpack', function(expr, var, start, n, en) -- TODO TABLE ARGS
   local eval = require 'eval'
   local pattern = require 'pattern'
 
@@ -37,7 +37,7 @@ fn.def_lua_symb('iter', 'unpack', function(expr, var, start, n)
 
   local res = start
   for _ = 1, n do
-    res = eval.eval(pattern.substitute_var(expr, var, res))
+    res = eval.eval(pattern.substitute_var(expr, var, res), env)
   end
   return res
 end)

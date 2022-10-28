@@ -4,6 +4,8 @@ local calc = require 'calc'
 local pattern = require 'pattern'
 local algo = require 'algorithm'
 local fraction = require 'fraction'
+local util = require 'util'
+local Env = require 'env'
 local dbg = require 'dbg'
 
 local functions = { table = {} }
@@ -12,24 +14,58 @@ local functions = { table = {} }
 ---@param name     string            Function name
 ---@param arg_mode 'unpack'|'table'  Argument pass mode
 ---@param attribs  table             Function attributes
-function functions.def_lua(name, arg_mode, fn, attribs)
+function functions.def_lua(name, arg_mode, fn, ...)
   arg_mode = arg_mode or 'unpack'
 
   local new_fn = fn
   if arg_mode == 'unpack' then
-    new_fn = function(a) return fn(table.unpack(a)) end
+    new_fn = function(a, _) return fn(table.unpack(a)) end
   end
 
   functions.table[name] = {
     fn = new_fn,
-    attribs = attribs or {},
+    attribs = {...},
   }
 end
 
 -- Define function that gets arguments passed unevaluated
 function functions.def_lua_symb(name, arg_mode, fn)
-  functions.def_lua(name, arg_mode, fn, {no_eval_args = true})
+  functions.def_lua(name, arg_mode, fn, 'no_eval_args')
 end
+
+
+functions.def_lua('approx', 'table', function(u, env)
+  env.approx = true
+  return u[1]
+end)
+
+functions.def_lua('fact', 'unpack', function(u)
+  if lib.kind(u, 'int') then
+    return calc.factorial(u)
+  end
+end)
+
+functions.def_lua('sum', 'table', function(args, env)
+  local eval = require 'eval'
+
+  local expr = args[1]
+  local var = lib.safe_sym(args[2])
+  local start = lib.safe_int(args[3])
+  local stop = lib.safe_int(args[4])
+
+  if not var or not start or not stop then
+    print(var)
+    print(start)
+    print(stop)
+    return
+  end
+
+  local res = {'int', 0}
+  for n = start, stop do
+    res = eval.eval({'+', res, pattern.substitute_var(expr, var, {'int', n})}, env)
+  end
+  return res
+end)
 
 -- Debug
 functions.def_lua_symb('dbg', 'table', function(args)
@@ -72,7 +108,7 @@ functions.def_lua('denom', 'unpack', function(u) return {'int', calc.denominator
 -- Type conversion
 functions.def_lua('real', 'unpack', function(u)
   return calc.real(u)
-end, {no_units = true})
+end, 'no_units')
 
 -- Type checking functions
 local function isa_helper(args, k)
@@ -133,10 +169,7 @@ end
 
 
 local function get_attrib(f, name, default)
-  if f.attribs then
-    return f.attribs[name] or default
-  end
-  return default
+  return util.set.contains(f.attribs or {}, name) or default
 end
 
 function functions.call(call, env)
@@ -147,6 +180,7 @@ function functions.call(call, env)
   local name = lib.fn(call)
   local f = env:get_fn(name)
   if f then
+    env = Env(env)
     if not get_attrib(f, 'no_eval_args') then
       call = lib.map(call, eval.eval, env)
     end
@@ -160,12 +194,12 @@ function functions.call(call, env)
         local ok, match = pattern.match(call, ov.pattern)
         if ok then
           local sfn = pattern.substitute(ov.replacement, match)
-          return eval.eval(sfn)
+          return eval.eval(sfn, env)
         end
       end
     elseif f.fn then
       -- Lua based function
-      return f.fn(lib.get_args(call)) or call
+      return f.fn(lib.get_args(call), env) or call
     end
   end
   return nil

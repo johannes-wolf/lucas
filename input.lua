@@ -65,6 +65,7 @@ function input.read_expression(str)
       end
     end
     if v.suffix then
+      parselet.precedence = v.suffix.precedence
       parselet.infix = function(p, left, _)
         return p:parse_infix({k, left}, 0)
       end
