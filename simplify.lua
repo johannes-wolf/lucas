@@ -3,9 +3,6 @@ local util = require 'util'
 local calc = require 'calc'
 local dbg = require 'dbg'
 
-local units = require 'units'
-local functions = require 'functions'
-
 -- Simplification rules
 local simplify = {}
 
@@ -335,13 +332,7 @@ function simplify.product_rec(l)
       return merge_operands({a}, w, simplify.product_rec)
     end
   end
-
   error('unreachable (SPRDREC)')
-end
-
-local function dump_result(v)
-  print('> '..dbg.dump(v))
-  return v
 end
 
 function simplify.vector_operation(k, l, fn)

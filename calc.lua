@@ -347,10 +347,6 @@ function calc.difference(a, b)
 end
 
 local function mul_fractions(a, b)
-  if a[3] == b[3] then
-    return fraction.make(a[2] * b[2],
-                         a[3])
-  end
   return fraction.make(a[2] * b[2],
                        a[3] * b[3])
 end
@@ -475,8 +471,8 @@ function calc.pow(a, b)
       if lib.kind(a, 'int') then
         return calc.pow_ii(a[2], b[2])
       elseif lib.kind(a, 'frac') then
-        return fraction.make(lib.safe_int(calc.pow_ii(a[2], b[2])),
-                             lib.safe_int(calc.pow_ii(a[3], b[2])))
+        return calc.quotient(calc.pow_ii(a[2], b[2]),
+                             calc.pow_ii(a[3], b[2]))
       elseif lib.kind(a, 'real') then
         a = calc.real(a)
         b = calc.real(b)

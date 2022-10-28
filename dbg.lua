@@ -14,4 +14,9 @@ function d.dump(o)
   end
 end
 
+function d.print(v, msg)
+  print((msg or 'dbg: ')..dbg.dump(v))
+  return v
+end
+
 return d
