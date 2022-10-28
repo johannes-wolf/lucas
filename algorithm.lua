@@ -5,7 +5,61 @@ local dbg = require 'dbg'
 
 local algo = {}
 
+-- Parse 3 arguments of type index, start, stop
+-- Supporting the following combinations
+--   index, start, stop
+--   index=start, stop
+--   intv
+local function parse_index3(index, arg2, arg3)
+  if lib.kind(index, 'sym') then
+    return index, arg2, arg3
+  elseif lib.kind(index, '=') then
+    local eq_sym = lib.safe_sym(lib.arg(index, 1))
+    local eq_start = lib.safe_int(lib.arg(index, 2))
+    if eq_sym and eq_start then
+      return lib.arg(index, 1), lib.arg(index, 2), arg2
+    end
+  end
+end
+
+function algo.map(fn, vec)
+  local name = lib.safe_sym(fn) or lib.safe_fn(fn)
+  if not name then return nil end
+
+  local rest = lib.kind(fn, 'fn') and lib.get_args(fn, 2)
+
+  if lib.kind(vec, 'vec') then
+    return lib.map(vec, function(v)
+      if rest then
+        return util.list.join({'fn', name, v}, rest)
+      else
+        return {'fn', name, v}
+      end
+    end)
+  else
+    return {'fn', name, vec}
+  end
+end
+
+function algo.seq(fn, index, start, stop)
+  index, start, stop = parse_index3(index, start, stop)
+  index = lib.safe_sym(index)
+  start = lib.safe_int(start)
+  stop  = lib.safe_int(stop)
+
+  if start > stop then
+    return {'vec'}
+  end
+
+  local v = {'vec'}
+  for n = start, stop do
+    table.insert(v, pattern.substitute_var(fn, index, {'int', n}))
+  end
+  return v
+end
+
 function algo.sum_seq(fn, index, start, stop)
+  index, start, stop = parse_index3(index, start, stop)
   index = lib.safe_sym(index)
   start = lib.safe_int(start)
   stop  = lib.safe_int(stop)
@@ -23,6 +77,7 @@ function algo.sum_seq(fn, index, start, stop)
 end
 
 function algo.prod_seq(fn, index, start, stop)
+  index, start, stop = parse_index3(index, start, stop)
   index = lib.safe_sym(index)
   start = lib.safe_int(start)
   stop  = lib.safe_int(stop)

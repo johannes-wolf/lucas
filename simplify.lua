@@ -21,7 +21,7 @@ end
 --   x^2 => x
 --   x   => x
 local function base(u)
-  if lib.kind(u, 'sym', 'unit', '*', '+', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'unit', '*', '+', '!', 'fn') then
     return u
   elseif lib.kind(u, '^') then
     return lib.arg(u, 1)
@@ -37,7 +37,7 @@ end
 --   x^2 => 2
 --   x   => 1
 local function exponent(u)
-  if lib.kind(u, 'sym', 'unit', '*', '+', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'unit', '*', '+', '!', 'fn') then
     return {'int', 1}
   elseif lib.kind(u, '^') then
     return lib.arg(u, 2)
@@ -54,7 +54,7 @@ end
 --   2*y => *y
 --   x*y => x*y
 local function term(u)
-  if lib.kind(u, 'sym', 'unit', '+', '^', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'unit', '+', '^', '!', 'fn') then
     -- Return the uession as binary product (* u)
     return {'*', u}
   elseif lib.kind(u, '*') and lib.is_const(lib.arg(u, 1)) then
@@ -76,7 +76,7 @@ end
 --   2*y => 2
 --   x*y => 1
 local function const(expr)
-  if lib.kind(expr, 'sym', 'unit', '+', '^', '!', 'fn') then
+  if lib.kind(expr, 'vec', 'sym', 'unit', '+', '^', '!', 'fn') then
     -- Return constant factor (1)
     return {'int', 1}
   elseif lib.kind(expr, '*') and lib.is_const(lib.arg(expr, 1)) then
@@ -139,7 +139,8 @@ local function order_before(u, v)
     return not order_before(exponent(u), exponent(v)) -- FIXME: Order from high to low!
   elseif lib.kind(u, '!') and lib.kind(v, '!') then
     return order_before(u[2], v[2])
-  elseif lib.kind(u, 'fn') and lib.kind(v, 'fn') then
+  elseif (lib.kind(u, 'fn') and lib.kind(v, 'fn')) or
+         (lib.kind(u, 'vec') and lib.kind(v, 'vec')) then
     if lib.fn(u) ~= lib.fn(v) then
       return lib.fn(u) < lib.fn(v)
     end
@@ -153,26 +154,28 @@ local function order_before(u, v)
     return true
   elseif lib.kind(u, 'unit') and not lib.kind(v, 'unit') then
     return false
-  elseif lib.kind(u, '*') and lib.kind(v, '^', '+', '!', 'fn', 'sym', 'unit') then
+  elseif lib.kind(u, '*') and lib.kind(v, '^', '+', '!', 'fn', 'sym', 'unit', 'vec') then
     return order_before(u, {'*', v})
-  elseif lib.kind(u, '^') and lib.kind(v, '+', '!', 'fn', 'sym', 'unit') then
+  elseif lib.kind(u, '^') and lib.kind(v, '+', '!', 'fn', 'sym', 'unit', 'vec') then
     return order_before(u, {'^', v, {'int', 1}})
-  elseif lib.kind(u, '+') and lib.kind(v, '!', 'fn', 'sym', 'unit') then
+  elseif lib.kind(u, '+') and lib.kind(v, '!', 'fn', 'sym', 'unit', 'vec') then
     return order_before(u, {'+', v})
-  elseif lib.kind(u, '!') and lib.kind(v, 'fn', 'sym', 'unit') then
+  elseif lib.kind(u, '!') and lib.kind(v, 'fn', 'sym', 'unit', 'vec') then
     if lib.compare(u[2], v) then
       return false
     else
       return order_before(u, {'!', v})
     end
-  elseif lib.kind(u, 'fn') and lib.kind(v, 'sym', 'unit') then
+  elseif lib.kind(u, 'fn') and lib.kind(v, 'sym', 'unit', 'vec') then
     if lib.fn(u) == v[2] then
       return false
     else
       order_before(lib.fn(u), v[2])
     end
-  elseif lib.kind(u, 'sym') and lib.kind(v, 'unit') then
+  elseif lib.kind(u, 'sym') and lib.kind(v, 'unit', 'vec') then
     -- Order units last!
+    return true
+  elseif lib.kind(u, 'vec') and lib.kind(v, 'unit') then
     return true
   else
     return not order_before(v, u)
@@ -221,7 +224,7 @@ function simplify.rne_rec(u)
   assert(lib.num_args(u) <= 2)
 
   local k = lib.kind(u)
-  if k == 'int' or k == 'real' then
+  if k == 'int' or k == 'real' or k == 'vec' then
     return u
   elseif k == 'frac' then
     if u[3] == 0 then
@@ -290,6 +293,13 @@ function simplify.product_rec(l)
       else
         return {r}
       end
+    elseif lib.kind(a, 'vec') or lib.kind(b, 'vec') then
+      local v = simplify.vector_operation('*', l, simplify.product)
+      if v then
+        return {v}
+      else
+        return l
+      end
     elseif eq_const(a, 1) then
       return {b}
     elseif eq_const(b, 1) then
@@ -327,6 +337,29 @@ function simplify.product_rec(l)
   end
 
   error('unreachable (SPRDREC)')
+end
+
+local function dump_result(v)
+  print('> '..dbg.dump(v))
+  return v
+end
+
+function simplify.vector_operation(k, l, fn)
+  assert(#l <= 2)
+  local a, b = l[1], l[2]
+  if lib.kind(a, 'vec') and lib.kind(b, 'vec') and lib.num_args(a) == lib.num_args(b) then
+    return lib.mapi(a, function(idx, v)
+      return fn({k, v, lib.arg(b, idx)})
+    end)
+  elseif lib.kind(a, 'vec') and not lib.kind(b, 'vec') then
+    return lib.map(a, function(v)
+      return fn({k, v, b})
+    end)
+  elseif not lib.kind(a, 'vec') and lib.kind(b, 'vec') then
+    return lib.map(b, function(v)
+      return fn({k, a, v})
+    end)
+  end
 end
 
 function simplify.product(expr)
@@ -374,6 +407,13 @@ function simplify.sum_rec(l)
       return {b}
     elseif calc.is_zero_p(b) then
       return {a}
+    elseif lib.kind(a, 'vec') or lib.kind(b, 'vec') then
+      local v = simplify.vector_operation('+', l, simplify.sum)
+      if v then
+        return {v}
+      else
+        return l
+      end
     elseif lib.compare(term(a), term(b)) then
       local s = simplify.sum({'+', const(a), const(b)})
       local p = simplify.product({'*', s, term(a)})
@@ -433,7 +473,14 @@ function simplify.power(expr)
   assert(lib.kind(expr, '^'))
 
   local b, e = expr[2], expr[3]
-  if lib.is_const(b) then
+  if lib.kind(b, 'vec') or lib.kind(e, 'vec') then
+    local v = simplify.vector_operation('^', {b, e}, simplify.power)
+    if v then
+      return v
+    else
+      return {'^', b, e}
+    end
+  elseif lib.is_const(b) then
     return simplify.rne({'^', b, e})
   elseif lib.kind(b, '^') then
     local r, s = lib.arg(b, 1), lib.arg(b, 2)
@@ -490,6 +537,9 @@ function simplify.difference(u)
 end
 
 function simplify.factorial(u)
+  if lib.kind(u, 'vec') then
+    return lib.map(u, calc.factorial)
+  end
   return calc.factorial(lib.arg(u, 1))
 end
 
@@ -574,6 +624,23 @@ function simplify.relation(u)
     end
   end
   return u
+end
+
+function simplify.vector_operator(expr, env)
+  local k = lib.kind(expr)
+  for i = 1, lib.num_args(expr) do
+
+  end
+end
+
+local function has_vector_operands(u)
+  local n = 0
+  for i = 1, lib.num_args(u) do
+    if lib.kind(lib.arg(u, i), 'vec') then
+      n = n + 1
+    end
+  end
+  return n > 0 and n
 end
 
 function simplify.expr(expr, env)

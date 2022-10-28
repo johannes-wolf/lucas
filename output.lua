@@ -1,6 +1,7 @@
 local operator = require 'operator'
 local units = require 'units'
 local lib = require 'lib'
+local util = require 'util'
 
 local output = {
   fancy_units = true,
@@ -55,6 +56,8 @@ function output.print_alg(u)
       return format_sym(v)
     elseif k == 'unit' then
       return format_unit(v)
+    elseif k == 'vec' then
+      return '{'..table.concat(util.list.map(lib.get_args(v), print_alg_rec), ',')..'}'
     elseif k == 'fn' then
       local a = lib.map(v, print_alg_rec, 0)
       return v[2]..'('..table.concat(a, ', ', 3)..')'
