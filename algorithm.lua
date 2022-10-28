@@ -5,6 +5,41 @@ local dbg = require 'dbg'
 
 local algo = {}
 
+function algo.sum_seq(fn, index, start, stop)
+  index = lib.safe_sym(index)
+  start = lib.safe_int(start)
+  stop  = lib.safe_int(stop)
+
+  if start > stop then
+    return {'int', 0}
+  end
+
+  local res = pattern.substitute_var(fn, index, {'int', start})
+  for n = start + 1, stop do
+    res = {'+', res, pattern.substitute_var(fn, index, {'int', n})}
+  end
+
+  return res
+end
+
+function algo.prod_seq(fn, index, start, stop)
+  index = lib.safe_sym(index)
+  start = lib.safe_int(start)
+  stop  = lib.safe_int(stop)
+
+  if start > stop then
+    return {'int', 1}
+  end
+
+  local res = pattern.substitute_var(fn, index, {'int', start})
+  for n = start + 1, stop do
+    res = {'*', res, pattern.substitute_var(fn, index, {'int', n})}
+  end
+
+  return res
+end
+
+
 -- Returns a sub-expression list of expression u
 ---@param u table
 ---@return table

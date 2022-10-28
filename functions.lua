@@ -11,15 +11,36 @@ local dbg = require 'dbg'
 local functions = { table = {} }
 
 -- Register lua function
----@param name     string            Function name
----@param arg_mode 'unpack'|'table'  Argument pass mode
----@param attribs  table             Function attributes
-function functions.def_lua(name, arg_mode, fn, ...)
-  arg_mode = arg_mode or 'unpack'
+---@param name string       Function name
+---@param args 'var'|table  Argument pass mode
+---@vararg ... string       Function attributes
+function functions.def_lua(name, args, fn, ...)
+  args = args or 'var'
 
   local new_fn = fn
-  if arg_mode == 'unpack' then
-    new_fn = function(a, _) return fn(table.unpack(a)) end
+  if args == 'var' then
+    new_fn = function(a, env)
+      return fn(a, env)
+    end
+  elseif type(args) == 'number' then
+    new_fn = function(a, env)
+      if #a ~= args then
+        return 'undef'
+      end
+      return fn(a, env)
+    end
+  elseif type(args) == 'table' then
+    new_fn = function(a, env)
+      if #a > #args then
+        return 'undef'
+      end
+      local arg_tab = {}
+      for i, v in ipairs(args) do
+        local n = a[i]
+        arg_tab[v.name] = n
+      end
+      return fn(arg_tab, env)
+    end
   end
 
   functions.table[name] = {
@@ -30,66 +51,34 @@ end
 
 -- Define function that gets arguments passed unevaluated
 function functions.def_lua_symb(name, arg_mode, fn)
-  functions.def_lua(name, arg_mode, fn, 'no_eval_args')
+  functions.def_lua(name, arg_mode, fn, 'plain')
 end
 
-
-functions.def_lua('approx', 'table', function(u, env)
-  env.approx = true
-  return u[1]
-end)
-
-functions.def_lua('fact', 'unpack', function(u)
-  if lib.kind(u, 'int') then
-    return calc.factorial(u)
-  end
-end)
-
-functions.def_lua('sum', 'table', function(args, env)
+functions.def_lua('approx', 1, function(u, env)
   local eval = require 'eval'
-
-  local expr = args[1]
-  local var = lib.safe_sym(args[2])
-  local start = lib.safe_int(args[3])
-  local stop = lib.safe_int(args[4])
-
-  if not var or not start or not stop then
-    print(var)
-    print(start)
-    print(stop)
-    return
-  end
-
-  local res = {'int', 0}
-  for n = start, stop do
-    res = eval.eval({'+', res, pattern.substitute_var(expr, var, {'int', n})}, env)
-  end
-  return res
+  return eval.eval(u[1], Env(env, 'approx'))
 end)
+
+functions.def_lua('fact', 1, function(u)
+  return calc.factorial(u)
+end)
+
 
 -- Debug
-functions.def_lua_symb('dbg', 'table', function(args)
+functions.def_lua_symb('dbg', 'var', function(args)
   for _, v in ipairs(args) do
     print(dbg.dump(v))
   end
   return {'int', 0}
 end)
 
-
-functions.def_lua('sqrt', 'unpack', function(u, b)
-  if b and lib.kind(b, 'int') then
-    return {'^', u, fraction.make(1, lib.safe_int(b))}
-  end
-  return {'^', u, {'frac', 1, 2}}
-end)
-
 -- Expression
-functions.def_lua('free_of', 'unpack', function(u, v)
-  return {'bool', algo.free_of(u, v)}
-end)
+functions.def_lua('free_of', 2, function(a, _)
+  return {'bool', algo.free_of(a[1], a[2])}
+end, 'plain')
 
-functions.def_lua('derivative', 'unpack', function(f, x)
-  return algo.derivative(f, x)
+functions.def_lua('derivative', {{name = 'fn'}, {name = 'respect'}}, function(a, _)
+  return algo.derivative(a.fn, a.respect)
 end)
 
 -- Number
@@ -104,11 +93,6 @@ functions.def_lua('num',   'unpack', function(u)
                     end
 end)
 functions.def_lua('denom', 'unpack', function(u) return {'int', calc.denominator(u)} end)
-
--- Type conversion
-functions.def_lua('real', 'unpack', function(u)
-  return calc.real(u)
-end, 'no_units')
 
 -- Type checking functions
 local function isa_helper(args, k)
@@ -180,8 +164,7 @@ function functions.call(call, env)
   local name = lib.fn(call)
   local f = env:get_fn(name)
   if f then
-    env = Env(env)
-    if not get_attrib(f, 'no_eval_args') then
+    if not get_attrib(f, 'plain') then
       call = lib.map(call, eval.eval, env)
     end
     if get_attrib(f, 'no_units') then

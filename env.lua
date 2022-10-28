@@ -72,7 +72,9 @@ function Env:set_unit(name, expr)
     error('unit '..name..' is marked constant')
   end
 
-  self.units[name] = expr
+  self.units[name] = {
+    value = expr
+  }
 end
 
 -- Reset all (localy) stored information

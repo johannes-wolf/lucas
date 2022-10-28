@@ -444,6 +444,8 @@ function simplify.power(expr)
                         return simplify.power({'^', arg, e})
     end)
     return simplify.product(r)
+  elseif eq_const(e, 1) then
+    return b
   else
     return {'^', b, e}
   end

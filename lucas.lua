@@ -13,6 +13,7 @@ local dbg = require 'dbg'
 local algo = require 'algorithm'
 local eval = require 'eval'
 
+require 'fn.math'
 require 'fn.iteration'
 require 'fn.memory'
 require 'fn.io'
@@ -51,6 +52,7 @@ end
 -- TESTS
 functions.def_lua('n', 'unpack', algo.newtons_method)
 
+local env = Env()
 local ok, err = true, nil
 while true do
   units.compile()
@@ -58,17 +60,18 @@ while true do
   io.write('['..(ok and 'OK ' or 'ERR')..']> ')
 
   local str = io.read('l')
-  --ok, err = pcall(function()
+  ok, err = pcall(function()
       local expr = input.read_expression(str)
       if expr then
-        --print('input:        '..output.print_sexp(expr))
-
-        local simpl = eval.eval(expr, Env.global)
+        local simpl = eval.eval(expr, env)
         --print('simplified:   '..output.print_sexp(simpl))
         print('     = '..output.print_alg(simpl))
+
+        env:set_var('ans', simpl)
       end
-  --end)
+  end)
   if not ok then
-    --print('error: '..(err or 'ok'))
+    print('error: '..(err or 'ok'))
+    print(debug.traceback())
   end
 end

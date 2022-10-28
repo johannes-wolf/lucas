@@ -52,6 +52,10 @@ local function num_digits(n)
   end
 end
 
+local function is_int_i(n)
+  return n == math.floor(n)
+end
+
 function calc.negate_symbolic(n)
   if lib.kind(n, 'unit') then return n end
   local s = lib.safe_sym(n)
@@ -79,6 +83,38 @@ function calc.negate(n)
   return calc.negate_symbolic(n)
 end
 
+function calc.floor(n)
+  if lib.kind(n, 'int') then
+    return n
+  elseif lib.kind(n, 'bool') then
+    return {'int', n[2] == true}
+  elseif lib.kind(n, 'real') then
+    return {'int', math.floor(n[2])}
+  elseif lib.kind(n, 'frac') then
+    return {'int', math.floor(n[2] / n[3])}
+  else
+    return lib.map(n, calc.ceil)
+  end
+end
+
+function calc.ceil(n)
+  if lib.kind(n, 'int') then
+    return n
+  elseif lib.kind(n, 'bool') then
+    return {'int', n[2] == true}
+  elseif lib.kind(n, 'real') then
+    return {'int', math.ceil(n[2])}
+  elseif lib.kind(n, 'frac') then
+    return {'int', math.ceil(n[2] / n[3])}
+  else
+    return lib.map(n, calc.ceil)
+  end
+end
+
+function calc.integer(n)
+  return calc.floor(n)
+end
+
 function calc.real_symbolic(n)
   if lib.kind(n, 'unit') then return n end
   return {'fn', 'real', n}
@@ -101,7 +137,7 @@ end
 function calc.normalize_real(n)
   if lib.kind(n, 'real') then
     n = n[2]
-    if math.floor(n) == n then
+    if is_int_i(n) then
       return {'int', n}
     end
 
@@ -475,6 +511,48 @@ function calc.factorial(u)
   end
 
   return calc.factorial_symbolic(u)
+end
+
+local function sqrt_ii(n, m)
+  n = n ^ (1/m)
+  if is_int_i(n) then
+    return n
+  end
+end
+
+function calc.sqrt(u, n, approx_p)
+  if not n then
+    n = {'int', 2}
+  end
+
+  if not calc.is_natnum_p(n, false) then
+    return 'undef'
+  end
+
+  if lib.kind(u, 'frac') then
+    u = int_to_fraction(u)
+    return {'/', calc.sqrt({'int', u[2]}, n, approx_p),
+                 calc.sqrt({'int', u[3]}, n, approx_p)}
+  end
+
+  n = lib.safe_int(n)
+  if approx_p then
+    if n > 1 then
+      return {'^', u, fraction.make(1, n)}
+    else
+      return u
+    end
+  elseif lib.kind(u, 'int') then
+    local p = sqrt_ii(lib.safe_int(u), n)
+    if p then
+      return {'int', p}
+    end
+  end
+
+  if n ~= 2 then
+    return {'fn', 'sqrt', u, {'int', n}}
+  end
+  return {'fn', 'sqrt', u}
 end
 
 return calc

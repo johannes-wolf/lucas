@@ -57,6 +57,8 @@ function eval.with_assign(expr, env)
   local sym, replacement = lib.arg(expr, 1), lib.arg(expr, 2)
   if lib.kind(sym, 'sym') then
     env:set_var(lib.sym(sym), replacement)
+  elseif lib.kind(sym, 'unit') then
+    env:set_unit(lib.unit(sym), replacement)
   else
     error('not implemented')
   end
