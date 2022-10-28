@@ -16,10 +16,14 @@ function real.make(n)
 end
 
 local calc = {}
-calc.ZERO  = {'int', 0}
-calc.ONE   = {'int', 1}
-calc.TRUE  = {'bool', true}
-calc.FALSE = {'bool', true}
+calc.NAN     = {'sym', 'nan'}
+calc.INF     = {'sym', 'inf'}
+calc.NEG_INF = {'sym', 'ninf'}
+calc.ZERO    = {'int', 0}
+calc.ONE     = {'int', 1}
+calc.NEG_ONE = {'int', -1}
+calc.TRUE    = {'bool', true}
+calc.FALSE   = {'bool', false}
 
 -- Returns the number of digits of integer n
 ---@param n number  Integer
@@ -49,6 +53,7 @@ local function num_digits(n)
 end
 
 function calc.negate_symbolic(n)
+  if lib.kind(n, 'unit') then return n end
   local s = lib.safe_sym(n)
   if s == 'inf' then
     return {'sym', 'ninf'}
@@ -75,6 +80,7 @@ function calc.negate(n)
 end
 
 function calc.real_symbolic(n)
+  if lib.kind(n, 'unit') then return n end
   return {'fn', 'real', n}
 end
 
@@ -90,6 +96,18 @@ function calc.real(n)
     return lib.map(n, calc.real)
   end
   return calc.real_symbolic(n)
+end
+
+function calc.normalize_real(n)
+  if lib.kind(n, 'real') then
+    n = n[2]
+    if math.floor(n) == n then
+      return {'int', n}
+    end
+
+    return real.make(n)
+  end
+  return n
 end
 
 -- Return numerator of value n
@@ -147,7 +165,7 @@ end
 
 function calc.is_inf_p(n)
   return lib.safe_sym(n) == 'inf' or
-         lib.safe_sym(n) == 'neg_inf'
+         lib.safe_sym(n) == 'ninf'
 end
 
 function calc.is_nan_p(n)
@@ -370,9 +388,9 @@ function calc.pow_ii(a, b)
     elseif b == 0 then
       return {'int', 1}
     elseif b == -1 then
-      return calc.quotient(ONE, {'int', a})
+      return calc.quotient(calc.ONE, {'int', a})
     elseif b < -1 then
-      return calc.quotient(ONE, calc.pow_ii(a, -1 * b))
+      return calc.quotient(calc.ONE, calc.pow_ii(a, -1 * b))
     end
   else
     if b >= 1 then
@@ -394,10 +412,12 @@ end
 function calc.pow(a, b)
   if calc.is_nan_p(b) then
     return b
+  elseif calc.is_inf_p(a) then
+    return a
   elseif calc.is_zero(a) then
     return calc.pow_to_zero(b)
-  elseif lib.safe_bool(calc.eq(a, ONE)) or
-         lib.safe_bool(calc.eq(b, ONE)) then
+  elseif lib.safe_bool(calc.eq(a, calc.ONE)) or
+         lib.safe_bool(calc.eq(b, calc.ONE)) then
     return a
   elseif calc.is_zero(b) then
     return {'int', 1}

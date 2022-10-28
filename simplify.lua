@@ -211,6 +211,8 @@ function simplify.rational_number(u)
     return u
   elseif lib.kind(u, 'frac') then
     return u -- TODO: Either remove this function, or do not simplify fractions by default
+  elseif lib.kind(u, 'real') then
+    return calc.normalize_real(u)
   end
   return u
 end
@@ -283,19 +285,21 @@ function simplify.product_rec(l)
   if #l == 2 and lib.kind(a) ~= '*' and lib.kind(b) ~= '*' then
     if lib.is_const(a) and lib.is_const(b) then
       local r = simplify.rne({'*', a, b})
-      if calc.eq(r, calc.ONE) then
+      if eq_const(r, 1) then
         return {}
       else
         return {r}
       end
-    elseif calc.eq(a, calc.ONE) then
+    elseif eq_const(a, 1) then
       return {b}
-    elseif calc.eq(b, calc.ONE) then
+    elseif eq_const(b, 1) then
       return {a}
+    elseif calc.is_inf_p(b) then
+      return {calc.INF}
     elseif lib.compare(base(a), base(b)) then
       local s = simplify.sum({'+', exponent(a), exponent(b)})
       local p = simplify.power({'^', base(a), s})
-      if calc.eq(p, calc.ONE) then
+      if eq_const(p, 1) then
         return {}
       else
         return {p}
@@ -331,6 +335,10 @@ function simplify.product(expr)
   if util.set.contains(expr, 'undef') then
     return 'undef'
   elseif util.set.contains(expr, {'int', 0}) then
+    --BUG: Does not trigger on: inf 9 0
+    if util.set.contains(expr, calc.INF) or util.set.contains(expr, calc.NEG_INF) then
+      return calc.NAN
+    end
     return {'int', 0}
   elseif lib.num_args(expr) == 1 then
     return expr[2]
@@ -444,6 +452,16 @@ end
 function simplify.quotient(u)
   assert(lib.kind(u, '/'))
 
+  local a, b = lib.arg(u, 1), lib.arg(u, 2)
+  if calc.is_inf_p(a) then
+    if calc.is_inf_p(b) then
+      return calc.NAN -- inf/inf => nan
+    end
+    return a -- inf/a => inf
+  elseif calc.is_inf_p(b) then
+    return calc.ZERO -- a/inf => 0
+  end
+
   local p = simplify.power({'^', lib.arg(u, 2), {'int', -1}})
   return simplify.product({'*', lib.arg(u, 1), p})
 end
@@ -454,8 +472,18 @@ function simplify.difference(u)
   if lib.num_args(u) == 1 then
     return simplify.product({'*', {'int', -1}, u[2]})
   else
-    local d = simplify.product({'*', {'int', -1}, u[3]})
-    return simplify.sum({'+', u[2], d})
+    local a, b = lib.arg(u, 1), lib.arg(u, 2)
+    if calc.is_inf_p(a) then
+      if calc.is_inf_p(b) then
+        return calc.NAN
+      end
+      return a
+    elseif calc.is_inf_p(b) then
+      return calc.NEG_INF
+    end
+
+    local d = simplify.product({'*', {'int', -1}, b})
+    return simplify.sum({'+', a, d})
   end
 end
 
@@ -467,12 +495,15 @@ function simplify.fn(u, env)
   return u
 end
 
-function simplify.unit(u, env)
-  -- FIXME: Maybe do not simplify units by default
-  if units.table[lib.unit(u)].value then
-    return simplify.expr(units.table[lib.unit(u)].value, env)
+function simplify.unit(expr, env)
+  local u = lib.safe_unit(expr)
+  if env then
+    local v = env:get_unit(u)
+    if v and v.value then
+      return simplify.expr(v.value)
+    end
   end
-  return u
+  return expr
 end
 
 function simplify.logical(u)
@@ -545,16 +576,11 @@ end
 
 function simplify.expr(expr, env)
   if lib.kind(expr, 'sym') then
-    -- TODO: Remove sym resolve from simplify!
-    --if env and env.vars[lib.sym(expr)] then
-    --  return env.vars[lib.sym(expr)]
-    --else
-    --end
     return expr
   elseif lib.kind(expr, 'bool', 'int', 'real') then
     return expr
   elseif lib.kind(expr, 'unit') then
-    return simplify.unit(expr)
+    return simplify.unit(expr, env)
   elseif lib.kind(expr, 'frac') then
     return simplify.rational_number(expr)
   elseif lib.is_relop(expr) then
@@ -574,8 +600,6 @@ function simplify.expr(expr, env)
       return simplify.difference(v)
     elseif k == '!' then
       return simplify.factorial(v)
-    elseif k == '<' or k == '<=' or k == '>' or k == '>=' or k == '=' or k == '!=' then
-      return simplify.relation(v)
     elseif k == 'and' or k == 'or' or k == 'not' then
       return simplify.logical(v)
     elseif k == 'fn' then

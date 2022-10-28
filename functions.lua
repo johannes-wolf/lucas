@@ -3,6 +3,7 @@ local units = require 'units'
 local calc = require 'calc'
 local pattern = require 'pattern'
 local algo = require 'algorithm'
+local fraction = require 'fraction'
 local dbg = require 'dbg'
 
 local functions = { table = {} }
@@ -39,6 +40,13 @@ functions.def_lua_symb('dbg', 'table', function(args)
 end)
 
 
+functions.def_lua('sqrt', 'unpack', function(u, b)
+  if b and lib.kind(b, 'int') then
+    return {'^', u, fraction.make(1, lib.safe_int(b))}
+  end
+  return {'^', u, {'frac', 1, 2}}
+end)
+
 -- Expression
 functions.def_lua('free_of', 'unpack', function(u, v)
   return {'bool', algo.free_of(u, v)}
@@ -63,10 +71,8 @@ functions.def_lua('denom', 'unpack', function(u) return {'int', calc.denominator
 
 -- Type conversion
 functions.def_lua('real', 'unpack', function(u)
-  if lib.is_const(u) then
-    return float.make(u)
-  end
-end)
+  return calc.real(u)
+end, {no_units = true})
 
 -- Type checking functions
 local function isa_helper(args, k)
@@ -143,6 +149,9 @@ function functions.call(call, env)
   if f then
     if not get_attrib(f, 'no_eval_args') then
       call = lib.map(call, eval.eval, env)
+    end
+    if get_attrib(f, 'no_units') then
+      call = units.remove_units(call)
     end
 
     if f.rules then

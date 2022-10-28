@@ -45,7 +45,9 @@ function eval.unit(expr, env)
   local u = lib.safe_unit(expr)
   if env then
     local v = env:get_unit(u)
-    if v then return v.value end
+    if v and v.value then
+      return v.value
+    end
   end
   return expr
 end
