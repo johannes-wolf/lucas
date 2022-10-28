@@ -482,8 +482,12 @@ function simplify.power(expr)
                         return simplify.power({'^', arg, e})
     end)
     return simplify.product(r)
+  elseif eq_const(e, 0) then
+    return {'int', 1}
   elseif eq_const(e, 1) then
     return b
+  elseif lib.safe_sym(b) == 'e' then
+    return {'fn', 'exp', e}
   else
     return {'^', b, e}
   end

@@ -11,9 +11,9 @@ local dbg = require 'dbg'
 local functions = { table = {} }
 
 -- Register lua function
----@param name string       Function name
----@param args 'var'|table  Argument pass mode
----@vararg ... string       Function attributes
+---@param name string              Function name
+---@param args 'var'|number|table  Argument pass mode
+---@vararg ... string              Function attributes
 function functions.def_lua(name, args, fn, ...)
   args = args or 'var'
 

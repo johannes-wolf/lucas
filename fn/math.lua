@@ -33,6 +33,21 @@ function (a, env)
   return calc.sqrt(a.v, a.n, env.approx)
 end)
 
+functions.def_lua('ln', 1,
+function (a, env)
+  return calc.ln(a[1])
+end)
+
+functions.def_lua('log', {{name = 'x'}, {name = 'base'}},
+function (a, env)
+  return calc.log(a.x, a.base)
+end)
+
+functions.def_lua('exp', 1,
+function (a, env)
+  return calc.exp(a[1], env.approx)
+end)
+
 functions.def_lua('sum_seq', {{name = 'fn'},
                               {name = 'index'},
                               {name = 'start'},

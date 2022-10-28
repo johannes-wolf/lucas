@@ -16,7 +16,7 @@ function vars.def(name, descr, exact, approx)
   }
 end
 
-vars.def('e',         'Eulers number e',     'e')
+vars.def('e',         'Eulers number e',     'e',  '2.718281828459045235360')
 vars.def('pi',        'Pi',                  'pi', '3.141592653589793238463')
 
 vars.def('inf',       'Infinity',            'inf')

@@ -120,6 +120,7 @@ function calc.real_symbolic(n)
   return {'fn', 'real', n}
 end
 
+---@return table
 function calc.real(n)
   local k = lib.kind(n)
   if k == 'int' then
@@ -391,6 +392,7 @@ local function div_reals(a, b)
   return real.make(a[2] / b[2])
 end
 
+---@return table
 function calc.quotient(a, b)
   if calc.is_zero_p(b) then
     return 'undef'
@@ -549,6 +551,50 @@ function calc.sqrt(u, n, approx_p)
     return {'fn', 'sqrt', u, {'int', n}}
   end
   return {'fn', 'sqrt', u}
+end
+
+function calc.ln_symbolic(x)
+  return {'fn', 'ln', x}
+end
+
+function calc.ln(x)
+  if lib.kind(x, 'int', 'frac', 'float') then
+    return {'real', math.log(calc.real(x)[2])}
+  end
+
+  return calc.ln_symbolic(x)
+end
+
+function calc.log_symbolic(x, b)
+  return {'fn', 'log', x, b}
+end
+
+function calc.log(x, b)
+  if not b or lib.safe_sym(b) == 'e' then
+    return calc.ln(x)
+  end
+
+  if lib.kind(x, 'int', 'frac', 'float') then
+    return {'real', math.log(calc.real(x)[2], calc.real(b)[2])}
+  end
+
+  return calc.log_symbolic(x, b)
+end
+
+function calc.exp_symbolic(x)
+  return {'fn', 'exp', x}
+end
+
+function calc.exp(x, approx_p)
+  if calc.is_zero_p(x) then
+    return {'int', 1}
+  end
+
+  if approx_p then
+    return {'real', math.exp(calc.real(x)[2])}
+  end
+
+  return calc.exp_symbolic(x)
 end
 
 return calc
