@@ -1,17 +1,14 @@
 local fn = require 'functions'
 local Env = require 'env'
 
-fn.def_lua('mem.reset', 'unpack', function()
-  Env.global:reset()
-  return {'bool', true}
-end)
-
-fn.def_lua('mem.show', 'unpack', function()
+fn.def_lua('mem.show', 0,
+function()
   print(Env.global:print())
   return {'bool', true}
 end)
 
-fn.def_lua('mem.load', 'unpack', function()
+fn.def_lua('mem.load', 0,
+function()
   local eval = require 'eval'
   local input = require 'input'
 
@@ -28,7 +25,8 @@ fn.def_lua('mem.load', 'unpack', function()
   return {'bool', ok}
 end)
 
-fn.def_lua('mem.store', 'unpack', function()
+fn.def_lua('mem.store', 0,
+function()
   local f = io.open('.lucas_memory', 'w+')
   if f then
     f:write(Env.global:print())

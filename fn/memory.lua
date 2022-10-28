@@ -1,18 +1,12 @@
 local fn = require 'functions'
 local lib = require 'lib'
-local util = require 'lib'
-local memory = require 'memory'
+local Env = require 'env'
 
--- undef([sym, ...])
---   Undefines all globaly defined symbols passed as arguments.
---   Returns the number of symbols processed.
-fn.def_lua_symb('undef', 'table', function(args)
-  local n = 0
-  for _, s in ipairs(args) do
-    if memory.undef(s) then
-      n = n + 1
-    end
-  end
 
-  return {'int', n}
+-- mem.reset()
+--   Clears local and global memory
+fn.def_lua('mem.reset', 0,
+function(_, env)
+  Env.global:reset()
+  env:reset()
 end)

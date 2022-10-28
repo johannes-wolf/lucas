@@ -17,8 +17,8 @@ end
 
 -- Copy list range a:b
 ---@param l table
----@param a number
----@param b number
+---@param a number|nil
+---@param b number|nil
 ---@param mode nil|'unpack'
 ---@return table
 function list.slice(l, a, b, mode)

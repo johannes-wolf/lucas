@@ -42,7 +42,7 @@ function base.safe_fn(val)
 end
 
 -- Get (or compare) expression kind
----@param expr Expression
+---@param expr Expression|nil
 ---@return boolean|Kind
 function base.kind(expr, ...)
   if not expr then return false end
@@ -54,7 +54,7 @@ function base.kind(expr, ...)
 end
 
 -- Returns whether u is const
----@param u Expression
+---@param u Expression|nil
 function base.is_const(u)
   return base.kind(u, 'int', 'real', 'frac', 'bool')
 end
@@ -136,8 +136,8 @@ function base.num_args(u)
 end
 
 -- Get nth arg
----@param u Expression  Source expression
----@param n number      Argument indexn (1 based)
+---@param u Expression|nil  Source expression
+---@param n number          Argument indexn (1 based)
 ---@return Expression|nil
 function base.arg(u, n)
   return u and u[n + base.arg_offset(u)] or nil
@@ -153,7 +153,7 @@ end
 
 -- Apply function on each operand/argument
 ---@param fn function  Function to apply (vaule) => replacement
----@param any...       Optional values passed to fn
+---@param any...  any  Optional values passed to fn
 ---@return Expression  Copy of op with fn applied
 function base.map(u, fn, ...)
   if base.num_args(u) > 0 then

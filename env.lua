@@ -14,6 +14,15 @@ function Env:init(parent, mode)
   self.units = {}
 end
 
+function Env:undef(name)
+  if name then
+    self.vars[name] = nil
+    self.fn[name] = nil
+    self.units[name] = nil
+    return true
+  end
+end
+
 function Env:get_var(name)
   return self.vars[name] or (self.parent and self.parent:get_var(name))
 end

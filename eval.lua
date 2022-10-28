@@ -59,6 +59,8 @@ function eval.with_assign(expr, env)
     env:set_var(lib.sym(sym), replacement)
   elseif lib.kind(sym, 'unit') then
     env:set_unit(lib.unit(sym), replacement)
+  elseif lib.kind(sym, 'fn') then
+    env:set_fn(sym, replacement)
   else
     error('not implemented')
   end
@@ -105,10 +107,11 @@ function eval.eval_rec(expr, env)
 end
 
 -- Expression evaluation entry-point
----@param expr Expression  Expression
----@param env  Env?        Environment injection
----@return Expression
+---@param expr Expression|nil  Expression
+---@param env  Env?            Environment injection
+---@return Expression|nil
 function eval.eval(expr, env)
+  if not expr then return nil end
   return simplify.expr(eval.eval_rec(simplify.expr(expr, env), env), env)
 end
 

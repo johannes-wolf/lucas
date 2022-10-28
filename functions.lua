@@ -82,17 +82,19 @@ functions.def_lua('derivative', {{name = 'fn'}, {name = 'respect'}}, function(a,
 end)
 
 -- Number
-functions.def_lua('sign',  'unpack', function(u)
+functions.def_lua('sign',  1, function(u)
+                    u = u[1]
                     if lib.is_const(u) then
                       return {'int', calc.sign(u)}
                     end
 end)
-functions.def_lua('num',   'unpack', function(u)
+functions.def_lua('num',   1, function(u)
+                    u = u[1]
                     if lib.is_const(u) then
                       return {'int', calc.numerator(u)}
                     end
 end)
-functions.def_lua('denom', 'unpack', function(u) return {'int', calc.denominator(u)} end)
+functions.def_lua('denom', 1, function(u) return {'int', calc.denominator(u[1])} end)
 
 -- Type checking functions
 local function isa_helper(args, k)
@@ -103,17 +105,17 @@ local function isa_helper(args, k)
   return {'bool', true}
 end
 
-functions.def_lua('is.function', 'table', function(u) return isa_helper(u, 'fn') end)
-functions.def_lua('is.unit',     'table', function(u) return isa_helper(u, 'unit') end)
-functions.def_lua('is.symbol',   'table', function(u) return isa_helper(u, 'sym') end)
-functions.def_lua('is.bool',     'table', function(u) return isa_helper(u, 'bool') end)
-functions.def_lua('is.integer',  'table', function(u) return isa_helper(u, 'int') end)
-functions.def_lua('is.fraction', 'table', function(u) return isa_helper(u, 'frac') end)
-functions.def_lua('is.real',     'table', function(u) return isa_helper(u, 'real') end)
+functions.def_lua('is.function', 'var', function(u) return isa_helper(u, 'fn') end)
+functions.def_lua('is.unit',     'var', function(u) return isa_helper(u, 'unit') end)
+functions.def_lua('is.symbol',   'var', function(u) return isa_helper(u, 'sym') end)
+functions.def_lua('is.bool',     'var', function(u) return isa_helper(u, 'bool') end)
+functions.def_lua('is.integer',  'var', function(u) return isa_helper(u, 'int') end)
+functions.def_lua('is.fraction', 'var', function(u) return isa_helper(u, 'frac') end)
+functions.def_lua('is.real',     'var', function(u) return isa_helper(u, 'real') end)
 
 -- Unit specific functions
-functions.def_lua('units.remove',  'unpack', function(u) return units.remove_units(u) or {'int', 1} end)
-functions.def_lua('units.extract', 'unpack', function(u) return units.extract_units(u) or {'int', 1} end)
+functions.def_lua('units.remove',  1, function(u) return units.remove_units(u[1]) or {'int', 1} end)
+functions.def_lua('units.extract', 1, function(u) return units.extract_units(u[1]) or {'int', 1} end)
 
 
 -- Reorder funciton patterns by argument count and type
