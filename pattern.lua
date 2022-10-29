@@ -2,8 +2,12 @@ local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
 local Env = require 'env'
+local dbg = require 'dbg'
 
 local pattern = {}
+
+-- List of function names that are pattern specific
+pattern.pattern_fn = {'cond', 'quote'}
 
 ---@alias Variables table<string, table>
 
@@ -26,7 +30,7 @@ local function match_rec(expr, parent, index, p, quote, vars)
 
     local env = Env()
     for k, v in pairs(vars) do
-      env.vars[k] = v.expr
+      env.vars[k] = { value = v.expr }
     end
 
     return lib.safe_bool(eval.eval(cnd, env), false)
@@ -48,6 +52,8 @@ local function match_rec(expr, parent, index, p, quote, vars)
 
     if lib.kind(p, 'sym') then
       local s = lib.sym(p)
+      assert(s)
+
       if vars[s] then
         return match_rec(expr, parent, index, vars[s].expr, true, vars)
       else
@@ -96,6 +102,20 @@ local function substitute_rec(expr, quote, vars)
   end
 
   return lib.map(expr, substitute_rec, quote, vars)
+end
+
+-- Returns the first non-pattern function argument of pattern
+-- Note that all pattern functions must use the first argument for the expression part!
+---@param expr Expression|nil
+---@return     Expression|nil
+function pattern.arg(expr)
+  if lib.kind(expr, 'fn') then
+    local name = lib.safe_fn(expr)
+    if util.set.contains(pattern.pattern_fn, name) then
+      return pattern.arg(lib.arg(expr, 1))
+    end
+  end
+  return expr
 end
 
 -- Match pattern against expression

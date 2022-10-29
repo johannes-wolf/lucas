@@ -110,8 +110,8 @@ end
 
 -- Return binary operator if input operatr is a vararg operator with more than
 -- two operands.
----@param u     Expression     Input expression
----@param assoc Associativity  Opertator associativity
+---@param u     Expression      Input expression
+---@param assoc Associativity?  Opertator associativity
 ---@return      Expression
 function base.make_binary_operator(u, assoc)
   assoc = assoc or 'right'

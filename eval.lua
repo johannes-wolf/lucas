@@ -14,7 +14,11 @@ function eval.store(expr, env)
   if lib.kind(a, 'sym') then
     env:set_var(lib.sym(a), b)
   elseif lib.kind(a, 'fn') then
-    env:set_fn(a, b)
+    local f = pattern.arg(a)
+    if not lib.kind(f, 'fn') then
+      error('expected function, got '..lib.kind(f))
+    end
+    env:set_fn(lib.safe_fn(f), a, b)
   elseif lib.kind(a, 'unit') then
     env:set_unit(lib.unit(a), b)
   else
@@ -60,7 +64,11 @@ function eval.with_assign(expr, env)
   elseif lib.kind(sym, 'unit') then
     env:set_unit(lib.unit(sym), replacement)
   elseif lib.kind(sym, 'fn') then
-    env:set_fn(sym, replacement)
+    local f = pattern.arg(sym)
+    if not lib.kind(f, 'fn') then
+      error('expected function, got '..lib.kind(f))
+    end
+    env:set_fn(lib.safe_fn(f), sym, replacement)
   else
     error('not implemented')
   end
@@ -97,6 +105,8 @@ function eval.eval_rec(expr, env)
     return eval.unit(expr, env)
   elseif lib.kind(expr, ':=') then
     return eval.store(expr, env)
+  elseif lib.kind(expr, '::') then
+    return eval.condition(expr, env)
   elseif lib.kind(expr, '|') then
     return eval.with(expr, env)
   elseif lib.kind(expr, 'fn') then

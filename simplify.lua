@@ -690,6 +690,16 @@ function simplify.with(u, env)
   return {'|', a, b}
 end
 
+function simplify.condition(u, env)
+  trace_step('condition', u)
+
+  local a, b = lib.arg(u, 1), lib.arg(u, 2)
+  if not b or lib.safe_bool(b) then
+    return a
+  end
+  return {'fn', 'cond', a, b}
+end
+
 function simplify.expr(expr, env)
   trace_step('expr', expr)
 
@@ -724,6 +734,8 @@ function simplify.expr(expr, env)
       return simplify.logical(v)
     elseif k == 'fn' then
       return simplify.fn(v, env)
+    elseif k == '::' then
+      return simplify.condition(v, env)
     else
       return v
     end

@@ -65,6 +65,15 @@ end)
 
 
 -- Debug
+functions.def_lua_symb('dbg.trace', 'var',
+function (a, env)
+  local prev = dbg.trace
+  dbg.trace = true
+  local eval = require 'eval'
+  local r = eval.eval(a[1], env)
+  dbg.trace = prev
+  return r
+end)
 functions.def_lua_symb('dbg', 'var', function(args)
   for _, v in ipairs(args) do
     print(dbg.dump(v))
@@ -108,10 +117,16 @@ functions.def_lua('is.bool',     'var', function(u) return isa_helper(u, 'bool')
 functions.def_lua('is.integer',  'var', function(u) return isa_helper(u, 'int') end)
 functions.def_lua('is.fraction', 'var', function(u) return isa_helper(u, 'frac') end)
 functions.def_lua('is.real',     'var', function(u) return isa_helper(u, 'real') end)
+functions.def_lua('is.vec',      'var', function(u) return isa_helper(u, 'vec') end)
 
 -- Unit specific functions
 functions.def_lua('units.remove',  1, function(u) return units.remove_units(u[1]) or {'int', 1} end)
 functions.def_lua('units.extract', 1, function(u) return units.extract_units(u[1]) or {'int', 1} end)
+
+-- Pattern stub functions to prevent argument evaluation
+for _, v in ipairs(pattern.pattern_fn) do
+  functions.def_lua(v, 'var',  function() end, 'plain')
+end
 
 
 -- Reorder funciton patterns by argument count and type

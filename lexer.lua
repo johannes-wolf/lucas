@@ -48,7 +48,7 @@ end
 local function parse_operator(s, i)
   local t = {
     ':=',
-    '|',
+    '::', '|',
     'and', 'or', 'not',
     '=', '!=',
     '<=', '<', '>=', '>',

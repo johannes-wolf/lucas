@@ -22,6 +22,8 @@ op.def_operator('not', 'prefix', 5)
 op.def_operator('=',  'infix',   6)
 op.def_operator('!=', 'infix',   6)
 
+op.def_operator('::',  'infix',  6) -- Pattern condition (use nested or parens instead of 'and' to work around precedence conflicts)
+
 op.def_operator('<',  'infix',   7)
 op.def_operator('<=', 'infix',   7)
 op.def_operator('>',  'infix',   7)

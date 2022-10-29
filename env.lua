@@ -50,8 +50,8 @@ end
 
 -- Store function pattern => expr
 -- Clear old functions if reset is true.
-function Env:set_fn(pattern, expr, reset)
-  local name = lib.safe_fn(pattern)
+function Env:set_fn(name, pattern, expr, reset)
+  name = name or lib.safe_fn(pattern)
   if not name then
     error('invalid function name')
   end
