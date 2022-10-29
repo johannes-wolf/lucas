@@ -1,9 +1,15 @@
 local lib = require 'lib'
 local util = require 'util'
+local calc = require 'calc'
 local pattern = require 'pattern'
 local dbg = require 'dbg'
 
 local algo = {}
+
+local function auto_simp(x)
+  local s = require 'simplify'
+  return s.expr(x)
+end
 
 -- Parse 3 arguments of type index, start, stop
 -- Supporting the following combinations
@@ -94,12 +100,71 @@ function algo.prod_seq(fn, index, start, stop)
   return res
 end
 
+-- Find a common factor for u and v
+function algo.common_factor(u, v)
+  u = auto_simp(u)
+  v = auto_simp(v)
+
+  if lib.kind(u, 'int') and lib.kind(v, 'int') then
+    return calc.gcd(u, v)
+  elseif lib.kind(u, '*') then
+    local f = lib.arg(u, 1)
+    local r = algo.common_factor(f, v)
+
+    return {'*', r, algo.common_factor({'/', u, f}, {'/', v, r})}
+  elseif lib.kind(v, '*') then
+    return algo.common_factor(v, u)
+  else
+    local function base(x) return (lib.kind(x, '^') and lib.arg(x, 1)) or x end
+    local function expo(x) return (lib.kind(x, '^') and lib.arg(x, 2)) or calc.ONE end
+
+    if lib.compare(base(u), base(v)) then
+      local ue, ve = expo(u), expo(v)
+      if calc.is_ratnum_p(ue) and calc.is_ratnum_p(ve) and
+         calc.sign(ue) == calc.sign(ve) then
+        return {'^', base(u), calc.min({ue, ve})}
+      end
+    end
+  end
+
+  return {'int', 1}
+end
+
+function algo.factor_out(u)
+  u = auto_simp(u)
+  if lib.kind(u, '*') then
+    return lib.map(u, algo.factor_out)
+  elseif lib.kind(u, '^') then
+    return {'^', algo.factor_out(lib.arg(u, 1)), lib.arg(u, 2)}
+  elseif lib.kind(u, '+') then
+    local s = lib.map(u, algo.factor_out)
+    if lib.num_args(s) == 1 then
+      return lib.arg(s, 1)
+    end
+
+    local c = lib.arg(s, 1)
+    for i = 2, lib.num_args(s) do
+      c = algo.common_factor(c, lib.arg(s, i))
+    end
+    return {'*', c, lib.map(s, function(a) return auto_simp({'/', a, c}) end)}
+  end
+  return u
+end
+
+function algo.factor_out_term(u, t)
+  if lib.kind(u, '+') then
+    return {'*', t, lib.map(u, function(a) return auto_simp({'/', a, t}) end)}
+  elseif lib.kind(u, '^') then
+    return {'^', algo.factor_out_term(lib.arg(u, 1), t), lib.arg(u, 2)}
+  end
+  return u
+end
 
 -- Returns a sub-expression list of expression u
 ---@param u table
 ---@return table
 function algo.complete_sub_expr(u)
-  if lib.is_const(u) or lib.kind(u, 'sym', 'unit') then
+  if lib.is_atomic(u) then
     return {u}
   else
     local s = {u}
@@ -126,19 +191,6 @@ function algo.free_of(u, v)
       end
     end
     return true
-  end
-end
-
--- Replace symbol s with expression v
-function algo.substitute_all(expr, s, v)
-  assert(lib.kind(s, 'sym'))
-  if lib.kind(expr, 'sym')  and lib.sym(expr) == lib.sym(s) then
-    return v
-  --elseif lib.kind(expr, 'fn') then
-    -- Do not alter function args!
-    --return expr
-  else
-    return lib.map(expr, algo.substitute_all, s, v)
   end
 end
 
@@ -172,8 +224,7 @@ end
 function algo.derivative(u, x)
   assert(lib.kind(x, 'sym'))
 
-  local simplify = require 'simplify'
-  u = simplify.expr(u)
+  u = auto_simp(u)
 
   if lib.kind(u, 'sym') and lib.sym(u) == lib.sym(x) then
     return {'int', 1}
@@ -197,19 +248,6 @@ function algo.derivative(u, x)
   else
     return {'fn', 'derivative', u, x}
   end
-end
-
-function algo.iterate(fx, x, start, n)
-  local eval = require 'eval'
-
-  -- FIXME
-  if n then n = n[2] else n = 10 end
-
-  local xv = start
-  for _ = 1, n do
-    xv = eval.eval(pattern.substitute_var(fx, lib.sym(x), xv))
-  end
-  return xv
 end
 
 -- Compute zeros of u with respect to x and step-count s

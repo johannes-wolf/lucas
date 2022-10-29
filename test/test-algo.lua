@@ -50,4 +50,30 @@ function tests.derivative()
   expect('derivative(x^4+5x^4-6, x)', '4 x^3 + 4 5 x^3')
 end
 
+function tests.factor_out()
+  expect('factor_out((x^2+x y)^3)',       'x^3(x+y)^3')
+  expect('factor_out(a*(b+b x))',         'a b*(1+x)')
+  expect('factor_out(a b x+a c x+b c x)', 'x*(a b+b c+a c)')
+  expect('factor_out(a/x+b/x)',           '1/x*(a+b)')
+  expect('factor_out((a+b)^2,a)',         'a^2*(1+b/a)^2')
+end
+
+function tests.min()
+  expect('min(a,b)',   'min(a,b)')
+  expect('min(1,2)',   '1')
+  expect('min(1,0.1)', '0.1')
+  expect('min(3)',     '3')
+  expect('min(1,2,3)', '1')
+  expect('min(vec(1,2,3))', '1')
+end
+
+function tests.max()
+  expect('max(a,b)',   'max(a,b)')
+  expect('max(1,2)',   '2')
+  expect('max(1,0.1)', '1')
+  expect('max(3)',     '3')
+  expect('max(1,2,3)', '3')
+  expect('max(vec(1,2,3))', '3')
+end
+
 test.run(tests)

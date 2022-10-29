@@ -3,6 +3,16 @@ local algo = require 'algorithm'
 local util = require 'util'
 local functions = require 'functions'
 
+functions.def_lua('min', 'var',
+function (a, env)
+  return calc.min(a)
+end)
+
+functions.def_lua('max', 'var',
+function (a, env)
+  return calc.max(a)
+end)
+
 functions.def_lua('floor', '1',
 function (a, env)
   return calc.floor(a[1])
@@ -48,6 +58,11 @@ function (a, env)
   return calc.exp(a[1], env.approx)
 end)
 
+functions.def_lua('gcd', 2,
+function (a, env)
+  return calc.gcd(a[1], a[2])
+end)
+
 functions.def_lua('sum_seq', {{name = 'fn'},
                               {name = 'index'},
                               {name = 'start'},
@@ -76,4 +91,23 @@ functions.def_lua('seq', {{name = 'fn'},
                           {name = 'stop'}},
 function (a, env)
   return algo.seq(a.fn, a.index, a.start, a.stop)
+end)
+
+functions.def_lua('cfactor', 2,
+function (a, env)
+  return algo.common_factor(a[1], a[2])
+end)
+
+functions.def_lua('factor_out', {{name = 'expr'}, {name = 'factor'}},
+function (a, env)
+  if a.factor then
+    return algo.factor_out_term(a.expr, a.factor)
+  end
+  return algo.factor_out(a.expr)
+end)
+
+functions.def_lua('derivative', {{name = 'fn'},
+                                 {name = 'respect'}},
+function (a, env)
+  return algo.derivative(a.fn, a.respect)
 end)

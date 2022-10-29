@@ -59,6 +59,11 @@ function base.is_const(u)
   return base.kind(u, 'int', 'real', 'frac', 'bool')
 end
 
+-- Returns whether u is const, a symbol or a unit
+function base.is_atomic(u)
+  return base.is_const(u) or base.kind(u, 'sym', 'unit')
+end
+
 -- Returns whether u is a relational operator
 function base.is_relop(u)
   return base.kind(u, '=', '!=', '>', '>=', '<', '<=')

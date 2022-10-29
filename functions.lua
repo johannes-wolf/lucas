@@ -57,7 +57,7 @@ end
 functions.def_lua('approx', 1, function(u, env)
   local eval = require 'eval'
   return eval.eval(u[1], Env(env, 'approx'))
-end)
+end, 'plain')
 
 functions.def_lua('fact', 1, function(u)
   return calc.factorial(u)
@@ -76,10 +76,6 @@ end)
 functions.def_lua('free_of', 2, function(a, _)
   return {'bool', algo.free_of(a[1], a[2])}
 end, 'plain')
-
-functions.def_lua('derivative', {{name = 'fn'}, {name = 'respect'}}, function(a, _)
-  return algo.derivative(a.fn, a.respect)
-end)
 
 -- Number
 functions.def_lua('sign',  1, function(u)

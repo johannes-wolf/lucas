@@ -56,6 +56,27 @@ local function is_int_i(n)
   return n == math.floor(n)
 end
 
+-- GCD
+---@param a number
+---@param b number
+---@return number
+function calc.gcd_i(a, b)
+  return (b == 0 and a) or calc.gcd_i(b, a % b)
+end
+
+-- GCD
+---@param a Expression
+---@param b Expression
+---@return Expression
+function calc.gcd(a, b)
+  a = lib.safe_int(a)
+  b = lib.safe_int(b)
+  if a and b then
+    return {'int', calc.gcd_i(a, b)}
+  end
+  return 'undef'
+end
+
 function calc.negate_symbolic(n)
   if lib.kind(n, 'unit') then return n end
   local s = lib.safe_sym(n)
@@ -222,6 +243,13 @@ function calc.is_natnum_p(n, with_zero)
   end
 end
 
+-- Returns if n is a rational number
+function calc.is_ratnum_p(n, with_zero)
+  if lib.kind(n, 'int', 'frac') then
+    return true
+  end
+end
+
 local function make_compat_fractions(a, b)
   if a[3] == b[3] then
     return a, b
@@ -239,6 +267,49 @@ local function int_to_fraction(a)
   end
 end
 
+local function vminmax(v, fn)
+  if lib.num_args(v) >= 1 then
+    local m = lib.arg(v, 1)
+    for i = 2, lib.num_args(v) do
+      m = fn({m, lib.arg(v, i)})
+    end
+    return m
+  end
+  return 'undef'
+end
+
+---@param v table[]
+function calc.min(v)
+  if #v > 0 then
+    local m
+    for _, n in ipairs(v) do
+      if lib.kind(n, 'vec') then
+        n = vminmax(n, calc.min)
+      end
+      if not m or lib.safe_bool(calc.lt(n, m)) then
+        m = n
+      end
+    end
+    return m
+  end
+end
+
+---@param v table[]
+function calc.max(v)
+  if #v > 0 then
+    local m
+    for _, n in ipairs(v) do
+      if lib.kind(n, 'vec') then
+        n = vminmax(n, calc.max)
+      end
+      if not m or lib.safe_bool(calc.gt(n, m)) then
+        m = n
+      end
+    end
+    return m
+  end
+end
+
 function calc.eq(a, b)
   a = int_to_fraction(a)
   b = int_to_fraction(b)
@@ -248,12 +319,9 @@ function calc.eq(a, b)
     return {'bool', a[2] == b[2] and a[3] == b[3]}
   elseif lib.kind(a, 'frac', 'real') and
          lib.kind(b, 'frac', 'real') then
-    if lib.kind(a, 'real') then
-      b = calc.real(b)
-    elseif lib.kind(b, 'real') then
-      a = calc.real(a)
-    end
-    return {'bool', a[2] == b[2] and a[3] == b[3]}
+    b = calc.real(b)
+    a = calc.real(a)
+    return {'bool', a[2] == b[2]}
   else
     return 'undef'
   end
@@ -272,9 +340,9 @@ function calc.lt(a, b)
     a, b = make_compat_fractions(a, b)
     return {'bool', a[2] < b[2]}
   else
-
-
-    return 'undef' -- TODO
+    b = calc.real(b)
+    a = calc.real(a)
+    return {'bool', a[2] < b[2]}
   end
 end
 
@@ -295,7 +363,9 @@ function calc.gt(a, b)
     a, b = make_compat_fractions(a, b)
     return {'bool', a[2] > b[2]}
   else
-    return 'undef' -- TODO
+    b = calc.real(b)
+    a = calc.real(a)
+    return {'bool', a[2] > b[2]}
   end
 end
 
