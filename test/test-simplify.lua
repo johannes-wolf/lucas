@@ -104,4 +104,4 @@ function tests.div_inf()
   expect("inf/inf", {'sym', 'nan'})
 end
 
-test.run(tests)
+return tests

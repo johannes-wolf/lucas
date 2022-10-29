@@ -59,21 +59,21 @@ function tests.factor_out()
 end
 
 function tests.min()
-  expect('min(a,b)',   'min(a,b)')
-  expect('min(1,2)',   '1')
-  expect('min(1,0.1)', '0.1')
-  expect('min(3)',     '3')
-  expect('min(1,2,3)', '1')
+  expect('min(a,b)',        'min(a,b)')
+  expect('min(1,2)',        '1')
+  expect('min(1,0.1)',      '0.1')
+  expect('min(3)',          '3')
+  expect('min(1,2,3)',      '1')
   expect('min(vec(1,2,3))', '1')
 end
 
 function tests.max()
-  expect('max(a,b)',   'max(a,b)')
-  expect('max(1,2)',   '2')
-  expect('max(1,0.1)', '1')
-  expect('max(3)',     '3')
-  expect('max(1,2,3)', '3')
+  expect('max(a,b)',        'max(a,b)')
+  expect('max(1,2)',        '2')
+  expect('max(1,0.1)',      '1')
+  expect('max(3)',          '3')
+  expect('max(1,2,3)',      '3')
   expect('max(vec(1,2,3))', '3')
 end
 
-test.run(tests)
+return tests
