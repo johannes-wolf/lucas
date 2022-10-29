@@ -36,7 +36,6 @@ local function derivative2(u, x)
   --return rewrite.rueset_apply(rules, v)
 end
 
-
 local env = Env()
 local ok, err = true, nil
 while true do

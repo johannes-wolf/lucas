@@ -337,6 +337,21 @@ function calc.max(v)
   return calc.NEG_INF
 end
 
+local function eq_vector(a, b)
+  if lib.num_args(a) ~= lib.num_args(b) or lib.kind(a) ~= lib.kind(b) then
+    return calc.FALSE
+  end
+  for i = 1, math.max(lib.num_args(a), lib.num_args(b)) do
+    local r = calc.eq(lib.arg(a, i), lib.arg(b, i))
+    if lib.kind(r, 'bool') and not lib.safe_bool(r) then
+      return calc.FALSE
+    else
+      return { '=', a, b }
+    end
+    return calc.TRUE
+  end
+end
+
 function calc.eq(a, b)
   local u = int_to_fraction(a)
   local v = int_to_fraction(b)
@@ -349,6 +364,9 @@ function calc.eq(a, b)
     u = calc.real(u)
     v = calc.real(v)
     return {'bool', u[2] == v[2]}
+  elseif lib.kind(a, 'vec') or
+         lib.kind(b, 'vec') then
+    return eq_vector(a, b)
   else
     if lib.compare(a, b) then
       return calc.TRUE

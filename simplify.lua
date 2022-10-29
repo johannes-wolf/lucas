@@ -627,39 +627,21 @@ function simplify.relation(u)
   end
 
   u = lib.map(u, simplify.expr)
-
-  if lib.is_atomic(a) and lib.is_atomic(b) then
-    if lib.kind(u, '<') then
-      return calc.lt(a, b)
-    elseif lib.kind(u, '<=') then
-      return calc.lteq(a, b)
-    elseif lib.kind(u, '>') then
-      return calc.gt(a, b)
-    elseif lib.kind(u, '>=') then
-      return calc.gteq(a, b)
-    elseif lib.kind(u, '=') then
-      return calc.eq(a, b)
-    elseif lib.kind(u, '!=') then
-      return calc.neq(a, b)
-    else
-      error('unimplemented')
-    end
-  elseif lib.kind(a, 'sym') and lib.kind(b, 'sym') then
-    if lib.compare(a, b) then
-      if lib.kind(u, '=', '>=', '<=') then
-        return calc.TRUE
-      elseif lib.kind(u, '<', '>', '!=') then
-        return calc.FALSE
-      end
-    else
-      if lib.kind(u, '!=') then
-        return calc.TRUE
-      elseif lib.kind(u, '=') then
-        return calc.FALSE
-      end
-    end
+  if lib.kind(u, '<') then
+    return calc.lt(a, b)
+  elseif lib.kind(u, '<=') then
+    return calc.lteq(a, b)
+  elseif lib.kind(u, '>') then
+    return calc.gt(a, b)
+  elseif lib.kind(u, '>=') then
+    return calc.gteq(a, b)
+  elseif lib.kind(u, '=') then
+    return calc.eq(a, b)
+  elseif lib.kind(u, '!=') then
+    return calc.neq(a, b)
+  else
+    error('unimplemented')
   end
-  return u
 end
 
 function simplify.with_assignment(u, env)

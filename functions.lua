@@ -84,7 +84,7 @@ end)
 -- Expression
 functions.def_lua('free_of', 2, function(a, _)
   return {'bool', algo.free_of(a[1], a[2])}
-end, 'plain')
+end)
 
 -- Number
 functions.def_lua('sign',  1, function(u)

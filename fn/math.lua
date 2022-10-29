@@ -8,6 +8,16 @@ function (a, env)
   return calc.abs(a[1])
 end)
 
+functions.def_lua('eq', 2,
+function (a, env)
+  return calc.eq(a[1], a[2])
+end)
+
+functions.def_lua('neq', 2,
+function (a, env)
+  return calc.neq(a[1], a[2])
+end)
+
 functions.def_lua('min', 'var',
 function (a, env)
   return calc.min(a)
@@ -18,22 +28,22 @@ function (a, env)
   return calc.max(a)
 end)
 
-functions.def_lua('floor', '1',
+functions.def_lua('floor', 1,
 function (a, env)
   return calc.floor(a[1])
 end)
 
-functions.def_lua('ceil', '1',
+functions.def_lua('ceil', 1,
 function (a, env)
   return calc.ceil(a[1])
 end)
 
-functions.def_lua('integer', '1',
+functions.def_lua('integer', 1,
 function (a, env)
   return calc.integer(a[1])
 end)
 
-functions.def_lua('real', '1',
+functions.def_lua('real', 1,
 function (a, env)
   return calc.real(a[1])
 end)
