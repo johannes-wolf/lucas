@@ -9,3 +9,4 @@ Whats works:
 What does not:
 - Polynom division
 - Everything else
+- Infinity handling

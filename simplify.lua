@@ -1,6 +1,7 @@
 local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
+local functions = require 'functions'
 local dbg = require 'dbg'
 
 -- Simplification rules
@@ -210,7 +211,7 @@ function simplify.rational_number(u)
   if lib.kind(u, 'int') then
     return u
   elseif lib.kind(u, 'frac') then
-    return u -- TODO: Either remove this function, or do not simplify fractions by default
+    return calc.normalize_fraction(u)
   elseif lib.kind(u, 'real') then
     return calc.normalize_real(u)
   end
@@ -301,8 +302,6 @@ function simplify.product_rec(l)
       return {b}
     elseif eq_const(b, 1) then
       return {a}
-    elseif calc.is_inf_p(b) then
-      return {calc.INF}
     elseif lib.compare(base(a), base(b)) then
       local s = simplify.sum({'+', exponent(a), exponent(b)})
       local p = simplify.power({'^', base(a), s})
@@ -359,10 +358,6 @@ function simplify.product(expr)
   if util.set.contains(expr, 'undef') then
     return 'undef'
   elseif util.set.contains(expr, {'int', 0}) then
-    --BUG: Does not trigger on: inf 9 0
-    if util.set.contains(expr, calc.INF) or util.set.contains(expr, calc.NEG_INF) then
-      return calc.NAN
-    end
     return {'int', 0}
   elseif lib.num_args(expr) == 1 then
     return expr[2]
@@ -473,13 +468,13 @@ function simplify.power(expr)
     end
   elseif lib.is_const(b) then
     return simplify.rne({'^', b, e})
-  elseif lib.kind(b, '^') then
+  elseif lib.kind(b, '^') and lib.kind(e, 'int') then
     local r, s = lib.arg(b, 1), lib.arg(b, 2)
     local p = simplify.product({'*', s, e})
     return simplify.power({'^', r, p})
   elseif lib.kind(b, '*') then
     local r = lib.map(b, function(arg)
-                        return simplify.power({'^', arg, e})
+      return simplify.power({'^', arg, e})
     end)
     return simplify.product(r)
   elseif eq_const(e, 0) then
@@ -496,16 +491,6 @@ end
 function simplify.quotient(u)
   assert(lib.kind(u, '/'))
 
-  local a, b = lib.arg(u, 1), lib.arg(u, 2)
-  if calc.is_inf_p(a) then
-    if calc.is_inf_p(b) then
-      return calc.NAN -- inf/inf => nan
-    end
-    return a -- inf/a => inf
-  elseif calc.is_inf_p(b) then
-    return calc.ZERO -- a/inf => 0
-  end
-
   local p = simplify.power({'^', lib.arg(u, 2), {'int', -1}})
   return simplify.product({'*', lib.arg(u, 1), p})
 end
@@ -517,15 +502,6 @@ function simplify.difference(u)
     return simplify.product({'*', {'int', -1}, u[2]})
   else
     local a, b = lib.arg(u, 1), lib.arg(u, 2)
-    if calc.is_inf_p(a) then
-      if calc.is_inf_p(b) then
-        return calc.NAN
-      end
-      return a
-    elseif calc.is_inf_p(b) then
-      return calc.NEG_INF
-    end
-
     local d = simplify.product({'*', {'int', -1}, b})
     return simplify.sum({'+', a, d})
   end
@@ -538,7 +514,39 @@ function simplify.factorial(u)
   return calc.factorial(lib.arg(u, 1))
 end
 
+function simplify.fn_sqrt(u, env)
+  if lib.num_args(u) <= 2 then
+    return calc.sqrt(lib.arg(u, 1), lib.arg(u, 2), false)
+  end
+  return u
+end
+
+local allowed_fn = {
+  'sqrt', 'abs',
+}
+
+local auto_map_fn = {
+  'sqrt', 'abs',
+}
+
 function simplify.fn(u, env)
+  local name = lib.safe_fn(u)
+
+  -- If allowed, map function over collection
+  if lib.num_args(u) == 1 and lib.is_collection(lib.arg(u, 1)) then
+    if util.set.contains(auto_map_fn, name) then
+      return lib.map(lib.arg(u, 1), function(v)
+        return simplify.expr({'fn', name, v}, env)
+      end)
+    end
+  end
+
+  -- If allowed, call function durring simplification
+  if util.set.contains(allowed_fn, name) then
+    if lib.all_args(u, lib.is_const) then
+      return functions.call(u, env)
+    end
+  end
   return u
 end
 
@@ -587,7 +595,7 @@ function simplify.relation(u)
 
   u = lib.map(u, simplify.expr)
 
-  if lib.is_const(a) and lib.is_const(b) then
+  if lib.is_atomic(a) and lib.is_atomic(b) then
     if lib.kind(u, '<') then
       return calc.lt(a, b)
     elseif lib.kind(u, '<=') then

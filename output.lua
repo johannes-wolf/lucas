@@ -20,7 +20,8 @@ local function format_frac(f)
 end
 
 local function format_sym(s)
-  return s[2]
+  s = lib.safe_sym(s)
+  if s == 'ninf' then return '-inf' end
 end
 
 local function format_unit(s)

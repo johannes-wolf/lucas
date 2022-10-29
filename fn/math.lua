@@ -3,6 +3,11 @@ local algo = require 'algorithm'
 local util = require 'util'
 local functions = require 'functions'
 
+functions.def_lua('abs', 1,
+function (a, env)
+  return calc.abs(a[1])
+end)
+
 functions.def_lua('min', 'var',
 function (a, env)
   return calc.min(a)

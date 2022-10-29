@@ -64,6 +64,11 @@ function base.is_atomic(u)
   return base.is_const(u) or base.kind(u, 'sym', 'unit')
 end
 
+-- Returns whether u is a collection (vec, set, list, ...)
+function base.is_collection(u)
+  return base.kind(u, 'vec')
+end
+
 -- Returns whether u is a relational operator
 function base.is_relop(u)
   return base.kind(u, '=', '!=', '>', '>=', '<', '<=')
@@ -178,6 +183,9 @@ function base.mapi(u, fn, ...) -- Same as base.map, but passes index as first ar
 end
 
 -- Compare tables
+---@param u Expression|nil
+---@param v Expression|nil
+---@return  boolean
 function base.compare(u, v)
   local function cmp(a, b)
     if base.is_const(a) and base.is_const(b) then
@@ -190,7 +198,7 @@ function base.compare(u, v)
     elseif base.kind(a, 'fn') and base.kind(b, 'fn') then
       if base.fn(a) == base.fn(b) and base.num_args(a) == base.num_args(b) then
         for i = 1, base.num_args(a) do
-          if not base.compare(base.arg(a, i), base.arg(b, i)) then
+          if not cmp(base.arg(a, i), base.arg(b, i)) then
             return false
           end
         end
@@ -199,7 +207,7 @@ function base.compare(u, v)
       return false
     elseif base.kind(a) == base.kind(b) and base.num_args(a) == base.num_args(b) then
       for i = 1, base.num_args(a) do
-        if not base.compare(base.arg(a, i), base.arg(b, i)) then
+        if not cmp(base.arg(a, i), base.arg(b, i)) then
           return false
         end
       end
