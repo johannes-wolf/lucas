@@ -19,16 +19,6 @@ require 'fn.memory'
 require 'fn.io'
 
 
-
-local function desimplify(u)
-  local rules = {
-    {'when(n*a+b,n<0)', 'b-calc(-n a)'},
-    {'when(a+n*b,n<0)', 'a-calc(-n b)'},
-  }
-
-  --return rewrite.ruleset_apply(rules, u)
-end
-
 local function derivative2(u, x)
   x = x or {'sym', 'x'}
   local v = {'fn', 'deriv', u, x}
@@ -46,11 +36,6 @@ local function derivative2(u, x)
   --return rewrite.rueset_apply(rules, v)
 end
 
---functions.def_lua('deriv', 'table', function(args) return derivative2(args[1], args[2]) end)
-
-
--- TESTS
-functions.def_lua('n', 'unpack', algo.newtons_method)
 
 local env = Env()
 local ok, err = true, nil

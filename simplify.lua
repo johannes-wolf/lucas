@@ -4,6 +4,12 @@ local calc = require 'calc'
 local functions = require 'functions'
 local dbg = require 'dbg'
 
+local function trace_step(step, ...)
+  if dbg.trace then
+    print(dbg.format_trace(step, ...))
+  end
+end
+
 -- Simplification rules
 local simplify = {}
 
@@ -118,7 +124,7 @@ local function order_before(u, v)
   end
 
   if lib.is_const(u) and lib.is_const(v) then
-    return calc.lt(u, v)
+    return lib.safe_bool(calc.lt(u, v))
   elseif lib.kind(u, 'sym') and lib.kind(v, 'sym') or
          lib.kind(u, 'unit') and lib.kind(v, 'unit') then
     return u[2] < v[2]
@@ -181,6 +187,8 @@ local function order_before(u, v)
 end
 
 local function merge_operands(p, q, base_simp)
+  trace_step('merge_operands', p, q)
+
   assert(base_simp)
   assert(type(p) == 'table')
   if #p > 0 then assert(type(p[1]) == 'table') end
@@ -208,6 +216,8 @@ local function merge_operands(p, q, base_simp)
 end
 
 function simplify.rational_number(u)
+  trace_step('rational_number', u)
+
   if lib.kind(u, 'int') then
     return u
   elseif lib.kind(u, 'frac') then
@@ -219,6 +229,8 @@ function simplify.rational_number(u)
 end
 
 function simplify.rne_rec(u)
+  trace_step('rne_rec', u)
+
   assert(lib.num_args(u) <= 2)
 
   local k = lib.kind(u)
@@ -269,6 +281,8 @@ end
 
 -- Simplify rational number expression (rne)
 function simplify.rne(u)
+  trace_step('rne', u)
+
   local v = simplify.rne_rec(u)
   if v == 'undef' then
     return 'undef'
@@ -280,6 +294,8 @@ end
 ---@param l table  List of arguments
 ---@return table   Simplified list of arguments
 function simplify.product_rec(l)
+  trace_step('product_rec', l)
+
   assert(type(l) == 'table')
 
   local a, b = l[1], l[2]
@@ -335,6 +351,8 @@ function simplify.product_rec(l)
 end
 
 function simplify.vector_operation(k, l, fn)
+  trace_step('vector_operation', k, l)
+
   assert(#l <= 2)
   local a, b = l[1], l[2]
   if lib.kind(a, 'vec') and lib.kind(b, 'vec') and lib.num_args(a) == lib.num_args(b) then
@@ -353,6 +371,8 @@ function simplify.vector_operation(k, l, fn)
 end
 
 function simplify.product(expr)
+  trace_step('product', expr)
+
   assert(lib.kind(expr, '*'))
 
   if util.set.contains(expr, 'undef') then
@@ -378,6 +398,8 @@ function simplify.product(expr)
 end
 
 function simplify.sum_rec(l)
+  trace_step('sum_rec', l)
+
   assert(type(l) == 'table')
 
   local a, b = l[1], l[2]
@@ -434,6 +456,8 @@ function simplify.sum_rec(l)
 end
 
 function simplify.sum(u)
+  trace_step('sum', u)
+
   assert(lib.kind(u, '+'))
 
   if util.set.contains(u, 'undef') then
@@ -456,6 +480,8 @@ end
 ---@param expr table
 ---@return table
 function simplify.power(expr)
+  trace_step('power', expr)
+
   assert(lib.kind(expr, '^'))
 
   local b, e = expr[2], expr[3]
@@ -489,6 +515,8 @@ function simplify.power(expr)
 end
 
 function simplify.quotient(u)
+  trace_step('quotient', u)
+
   assert(lib.kind(u, '/'))
 
   local p = simplify.power({'^', lib.arg(u, 2), {'int', -1}})
@@ -496,6 +524,8 @@ function simplify.quotient(u)
 end
 
 function simplify.difference(u)
+  trace_step('difference', u)
+
   assert(lib.kind(u, '-'))
 
   if lib.num_args(u) == 1 then
@@ -508,17 +538,12 @@ function simplify.difference(u)
 end
 
 function simplify.factorial(u)
+  trace_step('factorial', u)
+
   if lib.kind(u, 'vec') then
     return lib.map(u, calc.factorial)
   end
   return calc.factorial(lib.arg(u, 1))
-end
-
-function simplify.fn_sqrt(u, env)
-  if lib.num_args(u) <= 2 then
-    return calc.sqrt(lib.arg(u, 1), lib.arg(u, 2), false)
-  end
-  return u
 end
 
 local allowed_fn = {
@@ -530,6 +555,8 @@ local auto_map_fn = {
 }
 
 function simplify.fn(u, env)
+  trace_step('fn', u)
+
   local name = lib.safe_fn(u)
 
   -- If allowed, map function over collection
@@ -551,6 +578,8 @@ function simplify.fn(u, env)
 end
 
 function simplify.unit(expr, env)
+  trace_step('unit', expr)
+
   local u = lib.safe_unit(expr)
   if env then
     local v = env:get_unit(u)
@@ -561,7 +590,9 @@ function simplify.unit(expr, env)
   return expr
 end
 
-function simplify.logical(u)
+function simplify.logical(u) -- TODO: merge_operands!
+  trace_step('logical', u)
+
   local a, b = lib.arg(u, 1), lib.arg(u, 2)
   if lib.kind(u, 'not') then
     if lib.is_const(a) then
@@ -581,6 +612,8 @@ function simplify.logical(u)
 end
 
 function simplify.relation(u)
+  trace_step('relation', u)
+
   assert(lib.num_args(u) == 2)
 
   -- Transform a<b<c => a<b and b<c if not mixing <> and =
@@ -630,10 +663,14 @@ function simplify.relation(u)
 end
 
 function simplify.with_assignment(u, env)
+  trace_step('with_assignment', u)
+
   return lib.map(u, simplify.expr, env)
 end
 
 function simplify.with_condition(u, env)
+  trace_step('with_condition', u)
+
   if lib.kind(u, 'and') then
     return lib.map(u, simplify.with_condition, env)
   elseif lib.kind(u, '=') then
@@ -642,6 +679,8 @@ function simplify.with_condition(u, env)
 end
 
 function simplify.with(u, env)
+  trace_step('with', u)
+
   local a, b = lib.arg(u, 1), lib.arg(u, 2)
   a = simplify.expr(a, env)
   b = simplify.with_condition(b, env)
@@ -652,6 +691,8 @@ function simplify.with(u, env)
 end
 
 function simplify.expr(expr, env)
+  trace_step('expr', expr)
+
   if lib.kind(expr, 'sym') then
     return expr
   elseif lib.kind(expr, 'bool', 'int', 'real') then

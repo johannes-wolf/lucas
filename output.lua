@@ -22,6 +22,7 @@ end
 local function format_sym(s)
   s = lib.safe_sym(s)
   if s == 'ninf' then return '-inf' end
+  return s
 end
 
 local function format_unit(s)

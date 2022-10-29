@@ -224,7 +224,7 @@ function calc.sign(n)
   elseif calc.is_inf_p(n, -1) then
     return -1
   else
-    return 1
+    return 1 --'undef'
   end
 end
 
@@ -350,9 +350,7 @@ function calc.eq(a, b)
     v = calc.real(v)
     return {'bool', u[2] == v[2]}
   else
-    if lib.kind(a, 'str') and lib.kind(b, 'str') then
-      return {'bool', lib.safe_str(a) == lib.safe_str(b)}
-    elseif not lib.is_const(a) and lib.compare(a, b) then
+    if lib.compare(a, b) then
       return calc.TRUE
     end
     return {'=', a, b}

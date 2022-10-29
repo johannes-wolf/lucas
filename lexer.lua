@@ -71,7 +71,7 @@ local function lex(str)
   local p = {
     {parse_whitespace},
     {parse_operator, 'o'},
-    {parse_string_literal, 'str'},
+    --{parse_string_literal, 'str'},
     {parse_identifier, 'id'},
     {parse_unit, 'u'},
     {parse_syntax, 's'},
