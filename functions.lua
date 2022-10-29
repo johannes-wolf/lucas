@@ -3,7 +3,6 @@ local units = require 'units'
 local calc = require 'calc'
 local pattern = require 'pattern'
 local algo = require 'algorithm'
-local fraction = require 'fraction'
 local util = require 'util'
 local Env = require 'env'
 local dbg = require 'dbg'
@@ -175,6 +174,8 @@ function functions.call(call, env)
   local eval = require 'eval'
 
   local name = lib.fn(call)
+  assert(name)
+
   local f = env:get_fn(name)
   if f then
     if not get_attrib(f, 'plain') then
@@ -193,7 +194,9 @@ function functions.call(call, env)
           return eval.eval(sfn, env)
         end
       end
-    elseif f.fn then
+    end
+
+    if f.fn then
       -- Lua based function
       return f.fn(lib.get_args(call), env) or call
     end

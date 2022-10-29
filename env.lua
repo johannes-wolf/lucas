@@ -114,7 +114,7 @@ function Env:print()
   return str
 end
 
-Env.global = Env('clean')
+Env.global = Env()
 
 Env.global.get_var = function(self, name)
   local vars = require 'var'

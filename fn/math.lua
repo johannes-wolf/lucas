@@ -97,8 +97,8 @@ end)
 functions.def_lua('map', {{name = 'fn'},
                           {name = 'vec'}},
 function (a, env)
-  return algo.map(a.fn, a.vec)
-end)
+  return algo.map(a.fn, a.vec, env)
+end, 'plain')
 
 functions.def_lua('seq', {{name = 'fn'},
                           {name = 'index'},

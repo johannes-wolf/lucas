@@ -6,16 +6,20 @@ local dbg = require 'dbg'
 
 local algo = {}
 
-local function auto_simp(x)
+local function auto_simp(x, env)
   local s = require 'simplify'
-  return s.expr(x)
+  return s.expr(x, env)
+end
+
+local function eval(x, env)
+  local s = require 'eval'
+  return s.eval(x, env)
 end
 
 -- Parse 3 arguments of type index, start, stop
 -- Supporting the following combinations
 --   index, start, stop
 --   index=start, stop
---   intv
 local function parse_index3(index, arg2, arg3)
   if lib.kind(index, 'sym') then
     return index, arg2, arg3
@@ -28,16 +32,19 @@ local function parse_index3(index, arg2, arg3)
   end
 end
 
-function algo.map(fn, vec)
+function algo.map(fn, vec, env)
+  -- map is a plain function
+  vec = eval(vec, env)
+
   local name = lib.safe_sym(fn) or lib.safe_fn(fn)
   if not name then return nil end
 
   local rest = lib.kind(fn, 'fn') and lib.get_args(fn, 2)
 
-  if lib.kind(vec, 'vec') then
+  if lib.num_args(vec) > 0 then
     return lib.map(vec, function(v)
       if rest then
-        return util.list.join({'fn', name, v}, rest)
+        return eval(util.list.join({'fn', name, v}, rest), env)
       else
         return {'fn', name, v}
       end

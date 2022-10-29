@@ -364,8 +364,8 @@ function calc.eq(a, b)
     u = calc.real(u)
     v = calc.real(v)
     return {'bool', u[2] == v[2]}
-  elseif lib.kind(a, 'vec') or
-         lib.kind(b, 'vec') then
+  elseif lib.is_collection(a) or
+         lib.is_collection(b) then
     return eq_vector(a, b)
   else
     if lib.compare(a, b) then
