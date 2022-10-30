@@ -119,9 +119,10 @@ function pattern.arg(expr)
 end
 
 -- Match pattern against expression
----@param expr Expression  Expression
----@param p    Expression  Pattern
----@param vars Variables?  Variables
+---@param expr Expression          Expression
+---@param p    Expression          Pattern
+---@param vars Variables?          Variables
+---@return     boolean, Variables
 function pattern.match(expr, p, vars)
   vars = vars or {}
   return match_rec(expr, nil, 1, p, false, vars), vars

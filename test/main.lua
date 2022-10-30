@@ -35,5 +35,6 @@ add_tests 'test-simplify'
 add_tests 'test-algo'
 add_tests 'test-relational'
 add_tests 'test-poly'
+add_tests 'test-pattern'
 
 test.run(tests)

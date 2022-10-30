@@ -4,13 +4,14 @@ local dbg = require 'dbg'
 local util = require 'util'
 local input = require 'input'
 local simplify = require 'simplify'
+local Env = require 'env'
 
 local function parse(str)
-  return simplify.expr(input.read_expression(str))
+  return simplify.expr(input.read_expression(str), Env())
 end
 
 local function expect(ou, ov)
-  local u = (type(ou) == 'string' and parse(ou)) or simplify.expr(ou)
+  local u = (type(ou) == 'string' and parse(ou)) or simplify.expr(ou, Env())
   local v = (type(ov) == 'string' and input.read_expression(ov)) or ov
 
   if not util.table.compare(u, v) then

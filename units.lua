@@ -99,12 +99,13 @@ units.def_unit('tr',  'Turn',     '2 pi _rad',       'rad')
 function units.compile()
   local input = require 'input'
   local simplify = require 'simplify'
+  local Env = require 'env'
 
   for _, k in ipairs(units.ordered) do
     local u = units.table[k]
     if type(u.value) == 'string' then
       local ok, err = pcall(function()
-          u.value = simplify.expr(input.read_expression(u.value))
+          u.value = simplify.expr(input.read_expression(u.value), Env())
       end)
       if not ok then
         print('Failed to compile unit '..k..'=>'..dbg.dump(u.value)..' error: '..err)

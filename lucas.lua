@@ -6,6 +6,7 @@ local Env = require 'env'
 local simplify = require 'simplify'
 local units = require 'units'
 local functions = require 'functions'
+local g = require 'global'
 
 local lib = require 'lib'
 local dbg = require 'dbg'
@@ -33,6 +34,14 @@ local function derivative2(u, x)
   --return rewrite.rueset_apply(rules, v)
 end
 
+local function msg(t, s)
+  print(string.format(' %3s : %s', t, s))
+end
+
+g.message = function(m) return msg('MSG', m) end
+g.warn    = function(m) return msg('WRN', m) end
+g.error   = function(m) return msg('ERR', m) end
+
 local env = Env()
 local n = 1
 local ok, err = true, nil
@@ -41,7 +50,7 @@ while true do
 
   io.write('['..(ok and 'OK ' or 'ERR')..']> ')
   local str = io.read('l')
-  ok, err = pcall(function()
+  ok, err = xpcall(function()
     local expr = input.read_expression(str)
     if expr then
       local simpl = eval.eval(expr, env)
@@ -52,7 +61,7 @@ while true do
 
       env:set_var('ans', simpl)
     end
-  end)
+  end, debug.traceback)
 
   if not ok then
     print('error: '..(err or 'ok'))

@@ -7,11 +7,13 @@ local dbg = require 'dbg'
 local algo = {}
 
 local function auto_simp(x, env)
+  assert(x and env)
   local s = require 'simplify'
   return s.expr(x, env)
 end
 
 local function eval(x, env)
+  assert(x and env)
   local s = require 'eval'
   return s.eval(x, env)
 end
@@ -135,19 +137,19 @@ function algo.prod_seq(fn, index, start, stop)
 end
 
 -- Find a common factor for u and v
-function algo.common_factor(u, v)
-  u = auto_simp(u)
-  v = auto_simp(v)
+function algo.common_factor(u, v, env)
+  u = auto_simp(u, env)
+  v = auto_simp(v, env)
 
   if lib.kind(u, 'int') and lib.kind(v, 'int') then
     return calc.gcd(u, v)
   elseif lib.kind(u, '*') then
     local f = lib.arg(u, 1)
-    local r = algo.common_factor(f, v)
+    local r = algo.common_factor(f, v, env)
 
-    return {'*', r, algo.common_factor({'/', u, f}, {'/', v, r})}
+    return {'*', r, algo.common_factor({'/', u, f}, {'/', v, r}, env)}
   elseif lib.kind(v, '*') then
-    return algo.common_factor(v, u)
+    return algo.common_factor(v, u, env)
   else
     local function base(x) return (lib.kind(x, '^') and lib.arg(x, 1)) or x end
     local function expo(x) return (lib.kind(x, '^') and lib.arg(x, 2)) or calc.ONE end
@@ -164,32 +166,32 @@ function algo.common_factor(u, v)
   return {'int', 1}
 end
 
-function algo.factor_out(u)
-  u = auto_simp(u)
+function algo.factor_out(u, env)
+  u = auto_simp(u, env)
   if lib.kind(u, '*') then
-    return lib.map(u, algo.factor_out)
+    return lib.map(u, algo.factor_out, env)
   elseif lib.kind(u, '^') then
-    return {'^', algo.factor_out(lib.arg(u, 1)), lib.arg(u, 2)}
+    return {'^', algo.factor_out(lib.arg(u, 1), env), lib.arg(u, 2)}
   elseif lib.kind(u, '+') then
-    local s = lib.map(u, algo.factor_out)
+    local s = lib.map(u, algo.factor_out, env)
     if lib.num_args(s) == 1 then
       return lib.arg(s, 1)
     end
 
     local c = lib.arg(s, 1)
     for i = 2, lib.num_args(s) do
-      c = algo.common_factor(c, lib.arg(s, i))
+      c = algo.common_factor(c, lib.arg(s, i), env)
     end
-    return {'*', c, lib.map(s, function(a) return auto_simp({'/', a, c}) end)}
+    return {'*', c, lib.map(s, function(a) return auto_simp({'/', a, c}, env) end)}
   end
   return u
 end
 
-function algo.factor_out_term(u, t)
+function algo.factor_out_term(u, t, env)
   if lib.kind(u, '+') then
-    return {'*', t, lib.map(u, function(a) return auto_simp({'/', a, t}) end)}
+    return {'*', t, lib.map(u, function(a) return auto_simp({'/', a, t}, env) end)}
   elseif lib.kind(u, '^') then
-    return {'^', algo.factor_out_term(lib.arg(u, 1), t), lib.arg(u, 2)}
+    return {'^', algo.factor_out_term(lib.arg(u, 1), t, env), lib.arg(u, 2)}
   end
   return u
 end
@@ -285,28 +287,28 @@ function algo.trig_subs(u)
 end
 
 -- Compute derivative of u with respect to x
-function algo.derivative(u, x)
+function algo.derivative(u, x, env)
   assert(lib.kind(x, 'sym'))
 
-  u = auto_simp(u)
+  u = auto_simp(u, env)
 
   if lib.kind(u, 'sym') and lib.sym(u) == lib.sym(x) then
     return {'int', 1}
   elseif lib.kind(u, '^') then
     local v, w = lib.arg(u, 1), lib.arg(u, 2)
-    return {'+', {'*', w, {'^', v, {'-', w, {'int', 1}}}, algo.derivative(v, x)},
-                 {'*', algo.derivative(w, x), {'^', v, w}, {'fn', 'ln', v}}}
+    return {'+', {'*', w, {'^', v, {'-', w, {'int', 1}}}, algo.derivative(v, x, env)},
+                 {'*', algo.derivative(w, x, env), {'^', v, w}, {'fn', 'ln', v}}}
   elseif lib.kind(u, '+') then
     local v = lib.arg(u, 1)
     local w = {'-', u, lib.arg(u, 1)}
-    return {'+', algo.derivative(v, x), algo.derivative(w, x)}
+    return {'+', algo.derivative(v, x, env), algo.derivative(w, x, env)}
   elseif lib.kind(u, '*') then
     local v = lib.arg(u, 1)
     local w = {'/', u, v}
-    return {'+', {'*', algo.derivative(v, x), w}, {'*', v, algo.derivative(w, x)}}
+    return {'+', {'*', algo.derivative(v, x, env), w}, {'*', v, algo.derivative(w, x, env)}}
   elseif lib.kind(u, 'fn') and lib.fn(u, 'sin') then
     local v =lib.arg(u, 1)
-    return {'*', {'fn', 'cos', v}, algo.derivative(v, x)}
+    return {'*', {'fn', 'cos', v}, algo.derivative(v, x, env)}
   elseif algo.free_of(u, x) then
     return {'int', 0}
   else
@@ -315,7 +317,7 @@ function algo.derivative(u, x)
 end
 
 -- Compute zeros of u with respect to x and step-count s
-function algo.newtons_method(fx, x, xn, s)
+function algo.newtons_method(fx, x, xn, s, env)
   assert(lib.kind(x, 'sym'))
 
   s = s or {'int', 1000}
@@ -323,10 +325,9 @@ function algo.newtons_method(fx, x, xn, s)
 
   s = s[2]
 
-  local eval = require 'eval'
   local output = require 'output'
 
-  local fd = eval.eval(algo.derivative(fx, x))
+  local fd = eval(algo.derivative(fx, x), env)
   print('  '..' fd='..output.print_alg(fd))
 
   xn = xn or {'int', 1}

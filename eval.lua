@@ -4,9 +4,24 @@ local simplify = require 'simplify'
 local functions = require 'functions'
 local pattern = require 'pattern'
 local calc = require 'calc'
+local algo = require 'algorithm'
+local g = require 'global'
 local dbg = require 'dbg'
 
 local eval = {}
+
+-- Returns true if replacement expr b is free of expr a
+local function allow_recall(a, b)
+  if a and b then
+    if not algo.free_of(b, a) then
+      if g.kill_recursive_recall then
+        g.error(string.format('Stopped recursive recall'))
+        return false
+      end
+    end
+  end
+  return true
+end
 
 function eval.store(expr, eval_rhs, env)
   env = Env.global
@@ -40,7 +55,7 @@ function eval.fn(expr, env)
   end
 
   local u = functions.call(expr, env)
-  if u and not lib.compare(expr, u) then
+  if u and allow_recall(expr, u) then
     return eval.eval(u, env)
   end
 
@@ -53,7 +68,7 @@ function eval.sym(expr, env)
     local v = env:get_var(s)
     if v then
       local u = env.approx and v.approx or v.value
-      if u and not lib.compare(expr, u) then
+      if u and allow_recall(expr, u) then
         return eval.eval(u, env)
       end
     end
@@ -65,7 +80,7 @@ function eval.unit(expr, env)
   local u = lib.safe_unit(expr)
   if env then
     local v = env:get_unit(u)
-    if v and v.value then
+    if v and v.value and allow_recall(expr, v.value) then
       return eval.eval(v.value, env)
     end
   end

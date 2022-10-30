@@ -3,11 +3,13 @@ local vars = { table = {} }
 function vars.def(name, descr, exact, approx)
   local input = require 'input'
   local simplify = require 'simplify'
+  local Env = require 'env'
+
   if type(exact) == 'string' then
-    exact = simplify.expr(input.read_expression(exact))
+    exact = simplify.expr(input.read_expression(exact), Env())
   end
   if type(approx) == 'string' then
-    approx = simplify.expr(input.read_expression(approx))
+    approx = simplify.expr(input.read_expression(approx), Env())
   end
   vars.table[name] = {
     const = true,

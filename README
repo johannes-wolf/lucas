@@ -27,6 +27,10 @@ Whats works:
     sign(x) :: x > 0 := 1
     sign(0) := 0
     
+  Temporary overrides
+    x+y | x=1
+    sin(x) x | sin(x)=pi and x=3
+
 
 What does not:
 - Everything else :-)

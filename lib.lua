@@ -109,7 +109,7 @@ function base.is_vararg_operator(k)
   return base.kind(k, '+', '*', 'and', 'or')
 end
 
--- Return binary operator if input operatr is a vararg operator with more than
+-- Return binary operator if input operatr is an n-ary operator with more than
 -- two operands.
 ---@param u     Expression      Input expression
 ---@param assoc Associativity?  Opertator associativity
@@ -142,6 +142,7 @@ end
 ---@param u Expression|nil  Kind
 ---@return number           Number of arguments
 function base.num_args(u)
+  if not u then return 0 end
   if base.kind(u, 'int', 'frac', 'real', 'bool', 'unit') then return 0 end
   return u and #u - base.arg_offset(u) or 0
 end
@@ -273,6 +274,17 @@ function base.any_arg(u, fn, ...)
     end
   end
   return false
+end
+
+-- Returns all args if u is of kind k and arg-count is n
+---@param u Expression
+---@param k Kind
+---@param n number
+---@return  Expression[]|nil
+function base.split_args_if(u, k, n)
+  if base.kind(u, k) and base.num_args(u) == n then
+    return table.unpack(u, base.arg_offset(u) + 1)
+  end
 end
 
 return base

@@ -69,7 +69,7 @@ end
 local matrix = {}
 
 function matrix.new(m, n, v)
-  local t = vector.new()
+  local t = vector.new(0)
   for _ = 1, lib.safe_int(m) or 0 do
     table.insert(t, vector.new(n, v))
   end
@@ -93,9 +93,9 @@ function (a, env)
   return vector.unit(a[1], a[2])
 end)
 
-functions.def_lua('vec.new', 1,
+functions.def_lua('vec.new', {{name = 'len', match = 'if_natnum0', transform = 'as_int'}},
 function (a, env)
-  return vector.new(a[1])
+  return vector.new(a.len)
 end)
 
 functions.def_lua('vec.len', 1,

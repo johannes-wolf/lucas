@@ -565,6 +565,11 @@ function simplify.fn(u, env)
 
   local name = lib.safe_fn(u)
 
+  -- Do not simplify arguments if tagged as 'plain'
+  if not functions.get_attrib(u, functions.attribs.plain, env) then
+    u = lib.map(u, simplify.expr, env)
+  end
+
   -- If allowed, map function over collection
   if lib.num_args(u) == 1 and lib.is_collection(lib.arg(u, 1)) then
     if util.set.contains(auto_map_fn, name) then
@@ -590,7 +595,7 @@ function simplify.unit(expr, env)
   if env then
     local v = env:get_unit(u)
     if v and v.value then
-      return simplify.expr(v.value)
+      return simplify.expr(v.value, env)
     end
   end
   return expr
@@ -664,7 +669,7 @@ function simplify.lnot(u)
   return calc.lnot(lib.arg(u, 1))
 end
 
-function simplify.relation(u)
+function simplify.relation(u, env)
   trace_step('relation', u)
 
   local a, b = lib.arg(u, 1), lib.arg(u, 2)
@@ -673,12 +678,12 @@ function simplify.relation(u)
   if lib.is_relop(a) and not lib.is_relop(b) then
     if lib.kind(a, '=', '!=') == lib.kind(u, '=', '!=') then
       local ab = lib.arg(a, 2)
-      return simplify.expr({'and', simplify.expr(a),
-                            simplify.expr({lib.kind(u), ab, b})})
+      return simplify.expr({'and', simplify.expr(a, env),
+                            simplify.expr({lib.kind(u), ab, b}, env)})
     end
   end
 
-  u = lib.map(u, simplify.expr)
+  u = lib.map(u, simplify.expr, env)
   if lib.kind(u, '<') then
     return calc.lt(a, b)
   elseif lib.kind(u, '<=') then
@@ -736,6 +741,7 @@ end
 
 function simplify.expr(expr, env)
   trace_step('expr', expr)
+  assert(expr and env)
 
   if lib.kind(expr, 'sym') then
     return expr
@@ -746,9 +752,11 @@ function simplify.expr(expr, env)
   elseif lib.kind(expr, 'frac') then
     return simplify.rational_number(expr)
   elseif lib.is_relop(expr) then
-    return simplify.relation(expr)
+    return simplify.relation(expr, env)
   elseif lib.kind(expr, '|') then
     return simplify.with(expr, env)
+  elseif lib.kind(expr, 'fn') then
+    return simplify.fn(expr, env)
   else
     local v = lib.map(expr, simplify.expr, env)
     local k = lib.kind(v)
@@ -770,8 +778,6 @@ function simplify.expr(expr, env)
       return simplify.nary_operator(v, k, calc.lor)
     elseif k == 'not' then
       return simplify.lnot(v)
-    elseif k == 'fn' then
-      return simplify.fn(v, env)
     elseif k == '::' then
       return simplify.condition(v, env)
     else

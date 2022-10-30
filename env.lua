@@ -36,9 +36,9 @@ function Env:get_unit(name)
 end
 
 -- Store symbol name => expr
-function Env:set_var(name, expr, const)
+function Env:set_var(name, expr, const, override)
   local v = self:get_var(name)
-  if v and v.const then
+  if not override and v and v.const then
     error('symbol '..name..' is constant')
   end
 
@@ -50,14 +50,14 @@ end
 
 -- Store function pattern => expr
 -- Clear old functions if reset is true.
-function Env:set_fn(name, pattern, expr, reset)
+function Env:set_fn(name, pattern, expr, reset, override)
   name = name or lib.safe_fn(pattern)
   if not name then
     error('invalid function name')
   end
 
   local v = self:get_fn(name)
-  if v and v.const then
+  if not override and v and v.const then
     error('function '..name..' is marked constant')
   end
 
@@ -75,9 +75,9 @@ function Env:set_fn(name, pattern, expr, reset)
 end
 
 -- Store unit name => expr
-function Env:set_unit(name, expr)
+function Env:set_unit(name, expr, override)
   local v = self:get_unit(name)
-  if v and v.const then
+  if not override and v and v.const then
     error('unit '..name..' is marked constant')
   end
 
