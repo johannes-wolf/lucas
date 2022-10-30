@@ -18,12 +18,12 @@ function vars.def(name, descr, exact, approx)
   }
 end
 
-vars.def('e',         'Eulers number e',     'e',  '2.718281828459045235360')
-vars.def('pi',        'Pi',                  'pi', '3.141592653589793238463')
+vars.def('e',         'Eulers number e',     nil,  '2.718281828459045235360')
+vars.def('pi',        'Pi',                  nil,  '3.141592653589793238463')
 
-vars.def('nan',       'Not a number',        'nan')
-vars.def('inf',       'Infinity',            'inf')
-vars.def('ninf',      'Negative infinity',   'ninf')
+vars.def('nan',       'Not a number',        nil)
+vars.def('inf',       'Infinity',            nil)
+vars.def('ninf',      'Negative infinity',   nil)
 
 vars.def('true',      'Boolean true',        {'bool', true})
 vars.def('false',     'Boolean false',       {'bool', false})

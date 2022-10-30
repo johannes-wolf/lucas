@@ -42,10 +42,14 @@ function Env:set_var(name, expr, const, override)
     error('symbol '..name..' is constant')
   end
 
-  self.vars[name] = {
-    const = const,
-    value = expr,
-  }
+  if lib.safe_sym(expr) == name then
+    self.vars[name] = nil
+  else
+    self.vars[name] = {
+      const = const,
+      value = expr,
+    }
+  end
 end
 
 -- Store function pattern => expr
@@ -65,13 +69,17 @@ function Env:set_fn(name, pattern, expr, reset, override)
     self.fn[name] = nil
   end
 
-  self.fn[name] = self.fn[name] or { rules = {} }
-  local f = self.fn[name]
-  local rule = require 'rule'
-  table.insert(f.rules, rule.make(pattern, expr))
+  if lib.safe_fn(expr) == name then
+    self.fn[name] = nil
+  else
+    self.fn[name] = self.fn[name] or { rules = {} }
+    local f = self.fn[name]
+    local rule = require 'rule'
+    table.insert(f.rules, rule.make(pattern, expr))
 
-  local functions = require 'functions'
-  functions.reorder_rules(f)
+    local functions = require 'functions'
+    functions.reorder_rules(f)
+  end
 end
 
 -- Store unit name => expr
@@ -81,9 +89,13 @@ function Env:set_unit(name, expr, override)
     error('unit '..name..' is marked constant')
   end
 
-  self.units[name] = {
-    value = expr
-  }
+  if lib.safe_unit(expr) == name then
+    self.units[name] = nil
+  else
+    self.units[name] = {
+      value = expr
+    }
+  end
 end
 
 -- Reset all (localy) stored information
