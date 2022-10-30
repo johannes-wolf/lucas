@@ -11,8 +11,8 @@ function tests.seq()
 end
 
 function tests.map()
-  Expect('map(sin,    vec(1, 2, 3))', 'vec(sin(1), sin(2), sin(3))')
-  Expect('map(f(x,1), vec(1, 2, 3))', 'vec(f(1,1), f(2,1), f(3,1))')
+  Expect('map(sin(x),      vec(1, 2, 3))', 'vec(sin(1), sin(2), sin(3))')
+  Expect('map(f(x,1)|x=$1, vec(1, 2, 3))', 'vec(f(1,1), f(2,1), f(3,1))')
 end
 
 function tests.sum_seq()

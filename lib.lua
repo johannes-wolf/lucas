@@ -46,7 +46,7 @@ end
 ---@return boolean|Kind
 function base.kind(expr, ...)
   if not expr then return false end
-  --assert(type(expr) == 'table') -- THERE IS A BUG IN COMPARE WHICH PASSES STRINGS TO KIND
+  assert(type(expr) == 'table')
   if select('#', ...) > 0 then
     return util.set.contains({...}, expr[1])
   end
@@ -102,10 +102,10 @@ function base.unit(u, ...)
 end
 
 -- Get if operator is varargs
----@param k Kind    Kind
----@return boolean  True if kind k is an operator with varargs
+---@param k Expression
+---@return  boolean|string
 function base.is_vararg_operator(k)
-  return base.kind(k, '+', '*')
+  return base.kind(k, '+', '*', 'and', 'or')
 end
 
 -- Return binary operator if input operatr is a vararg operator with more than
@@ -167,11 +167,11 @@ function base.set_arg(u, n, v)
 end
 
 -- Get arguments as list
----@param u Expression   Source expression
----@param start number?  Offset (defaults to 1)
----@return Expression[]
+---@param u Expression|nil   Source expression
+---@param start number?      Offset (defaults to 1)
+---@return Expression[]|nil
 function base.get_args(u, start)
-  return util.list.slice(u, (start or 1) + base.arg_offset(u))
+  return base.num_args(u) > 0 and util.list.slice(u, (start or 1) + base.arg_offset(u))
 end
 
 -- Apply function on each operand/argument

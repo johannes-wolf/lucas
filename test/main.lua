@@ -29,9 +29,11 @@ function Expect(ou, ov)
   end
 end
 
+require 'fn.all'
 
 add_tests 'test-simplify'
 add_tests 'test-algo'
 add_tests 'test-relational'
+add_tests 'test-poly'
 
 test.run(tests)

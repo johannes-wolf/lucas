@@ -29,8 +29,8 @@ local function base(u)
     return u
   elseif lib.kind(u, '^') then
     return lib.arg(u, 1)
-  elseif lib.kind(u, 'int', 'frac', 'real') then
-    return 'undef'
+  elseif lib.kind(u) then
+    return nil
   else
     error('unreachable kind='..(lib.kind(u) or 'nil'))
   end
@@ -45,8 +45,8 @@ local function exponent(u)
     return {'int', 1}
   elseif lib.kind(u, '^') then
     return lib.arg(u, 2)
-  elseif lib.kind(u, 'int', 'frac', 'real') then
-    return 'undef'
+  elseif lib.is_const(u) then
+    return nil
   else
     error('unreachable kind='..lib.kind(u))
   end
@@ -67,8 +67,8 @@ local function term(u)
   elseif lib.kind(u, '*') and not lib.is_const(lib.arg(u, 1)) then
     -- Return the full exrpression (u)
     return u
-  elseif lib.kind(u, 'int', 'frac', 'real') then
-    return 'undef'
+  elseif lib.is_const(u) then
+    return nil
   else
     error('unreachable')
   end
@@ -81,16 +81,13 @@ end
 --   x*y => 1
 local function const(expr)
   if lib.kind(expr, 'vec', 'sym', 'unit', '+', '^', '!', 'fn') then
-    -- Return constant factor (1)
     return {'int', 1}
   elseif lib.kind(expr, '*') and lib.is_const(lib.arg(expr, 1)) then
-    -- Return first argument (u_1)
     return lib.arg(expr, 1)
   elseif lib.kind(expr, '*') and not lib.is_const(lib.arg(expr, 1)) then
-    -- Return constant factor (1)
     return {'int', 1}
-  elseif lib.kind(expr, 'int', 'frac', 'real') then
-    return 'undef'
+  elseif lib.is_const(expr) then
+    return nil
   else
     error('unreachable')
   end
@@ -101,18 +98,20 @@ end
 ---@param v table
 ---@return boolean
 local function order_before(u, v)
-  local function find_neq(x, y, offset)
-    for i = offset or 2, math.min(#x, #y) do
-      if not lib.compare(x[i], y[i]) then
-        return x[i], y[i], i
+  local function find_neq(x, y)
+    for i = 1, math.min(lib.num_args(x), lib.num_args(y)) do
+      if not lib.compare(lib.arg(x, i), lib.arg(y, i)) then
+        return lib.arg(x, i), lib.arg(y, i), i
       end
     end
   end
 
   local function find_neq_rev(x, y)
-    for i = 0, math.min(#x, #y) - 1 do
-      if not lib.compare(x[#x - i], y[#y - i]) then
-        return x[#x - i], y[#y - i], i
+    local nx = lib.num_args(x)
+    local ny = lib.num_args(y)
+    for i = 0, math.min(nx, ny) - 1 do
+      if not lib.compare(lib.arg(x, nx-i), lib.arg(y, ny-i)) then
+        return lib.arg(x, nx-i), lib.arg(y, ny-i), i
       end
     end
   end
@@ -149,7 +148,7 @@ local function order_before(u, v)
       return lib.fn(u) < lib.fn(v)
     end
 
-    local um, vm = find_neq(u, v, 3)
+    local um, vm = find_neq(u, v)
     if um and vm then
       return order_before(um, vm)
     end

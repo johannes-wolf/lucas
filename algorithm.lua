@@ -228,6 +228,33 @@ function algo.free_of(u, v)
   end
 end
 
+-- Expands products of sums
+--   (x + 2) (x + 3) => x^2 + 5 x + 6
+function algo.expand(u)
+  local k = lib.kind(u)
+  if k == '*' then
+    local a, b = lib.arg(u, 1), lib.arg(u, 2)
+    if lib.kind(a, '+') or lib.kind(b, '+') then
+      local rest = lib.get_args(u, 3)
+      local aa = lib.kind(a, '+') and lib.get_args(a) or {a}
+      local ba = lib.kind(b, '+') and lib.get_args(b) or {b}
+
+      local n = {'+'}
+      for i = 1, #aa do
+        for j = 1, #ba do
+          table.insert(n, { '*', aa[i], ba[j] })
+        end
+      end
+
+      assert(#n > 1)
+      return util.list.join({'*', n}, rest)
+    end
+    return u
+  else
+    return lib.map(u, algo.expand)
+  end
+end
+
 -- Return expression u with all trigonometric functions
 -- replaced by a combination of sin and cos.
 function algo.trig_subs(u)

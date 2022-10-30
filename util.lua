@@ -88,6 +88,12 @@ function list.join(a, b)
   return c
 end
 
+function list.prepend(a, b)
+  local c = {a}
+  for _, v in ipairs(b) do table.insert(c, v) end
+  return c
+end
+
 local tab = {}
 
 -- Compare two tables
@@ -151,9 +157,20 @@ end
 
 local set = {}
 
-function set.contains(l, needle)
+function set.unique(l, cmp)
+  local n = {l[1]}
+  for i = 2, #l do
+    if not set.contains(n, l[i], cmp) then
+      table.insert(n, l[i])
+    end
+  end
+  return n
+end
+
+function set.contains(l, needle, cmp)
+  cmp = cmp or tab.compare
   for _, v in ipairs(l) do
-    if tab.compare(v, needle) then return true end
+    if cmp(v, needle) then return true end
   end
 end
 

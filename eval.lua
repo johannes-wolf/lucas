@@ -50,7 +50,12 @@ function eval.sym(expr, env)
   local s = lib.safe_sym(expr)
   if env then
     local v = env:get_var(s)
-    if v then return eval.eval((env.approx and v.approx) or v.value, env) end
+    if v then
+      local u = env.approx and v.approx or v.value
+      if u and not lib.compare(expr, u) then
+        return eval.eval(u, env)
+      end
+    end
   end
   return expr
 end
@@ -101,7 +106,6 @@ function eval.with(expr, env)
   local sub_env = Env(env)
   eval.with_relation(lib.arg(expr, 2), sub_env)
 
-  -- Second evaluation with sub-env
   return eval.eval(target, sub_env)
 end
 
@@ -134,6 +138,21 @@ end
 function eval.eval(expr, env)
   if not expr then return nil end
   return simplify.expr(eval.eval_rec(simplify.expr(expr, env), env), env)
+end
+
+-- Evaluate expression string
+---@param str  string                     Expression
+---@param env  Env
+---@param vars table<string, Expression>  Variables to set
+function eval.str(str, env, vars)
+  local input = require 'input'
+
+  env = Env(env)
+  for k, v in pairs(vars) do
+    env:set_var(k, (type(v) == 'string' and input.read_expression(v)) or v)
+  end
+
+  return eval.eval(input.read_expression(str), env)
 end
 
 return eval

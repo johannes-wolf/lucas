@@ -13,12 +13,7 @@ local dbg = require 'dbg'
 local algo = require 'algorithm'
 local eval = require 'eval'
 
-require 'fn.math'
-require 'fn.iteration'
-require 'fn.memory'
-require 'fn.io'
-require 'fn.expr'
-require 'fn.vec'
+require 'fn.all'
 
 
 local function derivative2(u, x)

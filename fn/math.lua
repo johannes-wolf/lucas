@@ -126,6 +126,11 @@ function (a, env)
   return algo.factor_out(a.expr)
 end)
 
+functions.def_lua('expand', 1,
+function (a, env)
+  return algo.expand(a[1])
+end)
+
 functions.def_lua('derivative', {{name = 'fn'},
                                  {name = 'respect'}},
 function (a, env)
