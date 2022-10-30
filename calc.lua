@@ -16,14 +16,17 @@ function real.make(n)
 end
 
 local calc = {}
-calc.NAN     = {'sym', 'nan'}
-calc.INF     = {'sym', 'inf'}
-calc.NEG_INF = {'*', {'int', -1}, {'sym', 'inf'}}
-calc.ZERO    = {'int', 0}
-calc.ONE     = {'int', 1}
-calc.NEG_ONE = {'int', -1}
-calc.TRUE    = {'bool', true}
-calc.FALSE   = {'bool', false}
+calc.NAN           = {'sym', 'nan'}
+calc.INF           = {'sym', 'inf'}
+calc.NEG_INF       = {'*', {'int', -1}, {'sym', 'inf'}}
+calc.ZERO          = {'int', 0}
+calc.ONE           = {'int', 1}
+calc.NEG_ONE       = {'int', -1}
+calc.TRUE          = {'bool', true}
+calc.FALSE         = {'bool', false}
+calc.ZERO_POW_ZERO = calc.ZERO       -- Result for 0^0
+calc.DIV_ZERO      = calc.NAN        -- Result for 0^(-n)
+
 
 -- Returns the number of digits of integer n
 ---@param n number  Integer
@@ -50,6 +53,20 @@ local function num_digits(n)
   else
     return 1
   end
+end
+
+-- Returns if a is 'true'
+---@param a Expression
+---@return  boolean
+local function is_true_p(a)
+  if lib.is_const(a) then
+    if lib.kind(a, 'bool') then
+      return lib.safe_bool(a)
+    else
+      return lib.safe_bool(calc.neq(a, calc.ZERO))
+    end
+  end
+  return false
 end
 
 local function is_int_i(n)
@@ -610,8 +627,13 @@ function calc.quotient(a, b)
 end
 
 function calc.pow_to_zero(a)
-  -- TODO: Power to zero
-  return {'sym', 'nan'}
+  if lib.safe_bool(calc.gt(a, calc.ZERO)) then
+    return calc.ZERO
+  elseif lib.safe_bool(calc.eq(a, calc.ZERO)) then
+    return calc.ZERO_POW_ZERO
+  else
+    return calc.DIV_ZERO
+  end
 end
 
 -- Calc power of two integers a^b
@@ -649,7 +671,7 @@ end
 function calc.pow(a, b)
   if calc.is_nan_p(b) then
     return b
-  elseif calc.is_inf_p(a) then
+  elseif calc.is_inf_p(a, 0) then
     return a
   elseif calc.is_zero_p(a) then
     return calc.pow_to_zero(b)
@@ -795,6 +817,37 @@ function calc.abs(x)
     return x
   end
   return {'fn', 'abs', x}
+end
+
+function calc.land(a, b)
+  if is_true_p(a) and is_true_p(b) then
+    return b
+  elseif lib.is_const(a) and lib.is_const(b) then
+    if is_true_p(a) then
+      return b
+    else
+      return a
+    end
+  end
+  return {'and', a, b}
+end
+
+function calc.lor(a, b)
+  if is_true_p(a) then
+    return a
+  elseif is_true_p(b) then
+    return b
+  elseif lib.is_const(a) and lib.is_const(b) then
+    return b
+  end
+  return {'or', a, b}
+end
+
+function calc.lnot(a)
+  if lib.is_const(a) then
+    return {'bool', not is_true_p(a)}
+  end
+  return {'not', a}
 end
 
 return calc

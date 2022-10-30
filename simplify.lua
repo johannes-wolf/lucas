@@ -186,7 +186,7 @@ local function order_before(u, v)
   end
 end
 
-local function merge_operands(p, q, base_simp)
+local function merge_operands(p, q, base_simp, ...)
   trace_step('merge_operands', p, q)
 
   assert(base_simp)
@@ -201,16 +201,16 @@ local function merge_operands(p, q, base_simp)
     return q
   else -- MPRD-3
     local p1, q1 = p[1], q[1]
-    local h = base_simp({p1, q1})
+    local h = base_simp({p1, q1}, ...)
 
     if #h == 0 then -- 1
-      return merge_operands(util.list.rest(p), util.list.rest(q), base_simp)
+      return merge_operands(util.list.rest(p), util.list.rest(q), base_simp, ...)
     elseif #h == 1 then -- 2
-      return util.list.join(h, merge_operands(util.list.rest(p), util.list.rest(q), base_simp))
+      return util.list.join(h, merge_operands(util.list.rest(p), util.list.rest(q), base_simp, ...))
     elseif #h == 2 and lib.compare(h[1], p1) and lib.compare(h[2], q1) then -- 3
-      return util.list.join({p1}, merge_operands(util.list.rest(p), q, base_simp))
+      return util.list.join({p1}, merge_operands(util.list.rest(p), q, base_simp, ...))
     elseif #h == 2 and lib.compare(h[1], q1) and lib.compare(h[2], p1) then -- 4
-      return util.list.join({q1}, merge_operands(p, util.list.rest(q), base_simp))
+      return util.list.join({q1}, merge_operands(p, util.list.rest(q), base_simp, ...))
     end
   end
 end
@@ -307,6 +307,13 @@ function simplify.product_rec(l)
       else
         return {r}
       end
+    elseif lib.kind(a, 'vec') and lib.kind(b, 'vec') then
+      local v = simplify.vector_operation('*', l, simplify.product)
+      if v then
+        return {simplify.sum(util.list.join({'+'}, lib.get_args(v)))}
+      else
+        return l
+      end
     elseif lib.kind(a, 'vec') or lib.kind(b, 'vec') then
       local v = simplify.vector_operation('*', l, simplify.product)
       if v then
@@ -350,26 +357,6 @@ function simplify.product_rec(l)
   error('unreachable (SPRDREC)')
 end
 
-function simplify.vector_operation(k, l, fn)
-  trace_step('vector_operation', k, l)
-
-  assert(#l <= 2)
-  local a, b = l[1], l[2]
-  if lib.kind(a, 'vec') and lib.kind(b, 'vec') and lib.num_args(a) == lib.num_args(b) then
-    return lib.mapi(a, function(idx, v)
-      return fn({k, v, lib.arg(b, idx)})
-    end)
-  elseif lib.kind(a, 'vec') and not lib.kind(b, 'vec') then
-    return lib.map(a, function(v)
-      return fn({k, v, b})
-    end)
-  elseif not lib.kind(a, 'vec') and lib.kind(b, 'vec') then
-    return lib.map(b, function(v)
-      return fn({k, a, v})
-    end)
-  end
-end
-
 function simplify.product(expr)
   trace_step('product', expr)
 
@@ -394,6 +381,26 @@ function simplify.product(expr)
     elseif #v == 0 then
       return {'int', 1}
     end
+  end
+end
+
+function simplify.vector_operation(k, l, fn)
+  trace_step('vector_operation', k, l)
+
+  assert(#l <= 2)
+  local a, b = l[1], l[2]
+  if lib.kind(a, 'vec') and lib.kind(b, 'vec') and lib.num_args(a) == lib.num_args(b) then
+    return lib.mapi(a, function(idx, v)
+      return fn({k, v, lib.arg(b, idx)})
+    end)
+  elseif lib.kind(a, 'vec') and not lib.kind(b, 'vec') then
+    return lib.map(a, function(v)
+      return fn({k, v, b})
+    end)
+  elseif not lib.kind(a, 'vec') and lib.kind(b, 'vec') then
+    return lib.map(b, function(v)
+      return fn({k, a, v})
+    end)
   end
 end
 
@@ -485,10 +492,10 @@ function simplify.power(expr)
   assert(lib.kind(expr, '^'))
 
   local b, e = expr[2], expr[3]
-  if lib.kind(b, 'vec') or lib.kind(e, 'vec') then
+  if lib.kind(b, 'vec') and not lib.kind(e, 'vec') then
     local v = simplify.vector_operation('^', {b, e}, simplify.power)
     if v then
-      return v
+      return simplify.sum(util.list.join({'+'}, lib.get_args(v)))
     else
       return {'^', b, e}
     end
@@ -590,34 +597,80 @@ function simplify.unit(expr, env)
   return expr
 end
 
-function simplify.logical(u) -- TODO: merge_operands!
-  trace_step('logical', u)
-
-  local a, b = lib.arg(u, 1), lib.arg(u, 2)
-  if lib.kind(u, 'not') then
-    if lib.is_const(a) then
-      return {'bool', not lib.safe_bool(a, false)}
+-- Simplify n-ary operator
+---@param l  Expression[]  Argument list
+---@param k  Kind          Operator kind
+---@param fn function      Operator callback
+---@return   Expression[]
+function simplify.nary_operator_rec(l, k, fn)
+  local a, b = l[1], l[2]
+  if #l == 1 then
+    return {a}
+  elseif #l == 2 and (lib.kind(a) ~= k and lib.kind(b) ~= k) then
+    local r = fn(a, b)
+    if r then
+      return {r}
+    elseif order_before(b, a) then
+      return {b, a}
+    else
+      return l
     end
-  elseif lib.kind(u, 'and') then
-    if lib.is_const(a) and lib.is_const(b) then
-      return {'bool', lib.safe_bool(a, false) and lib.safe_bool(b, false)}
+  elseif #l == 2 then
+    if lib.kind(a) == k and lib.kind(b) == k then
+      return merge_operands(lib.get_args(a), lib.get_args(b), simplify.binary_operator_rec, k, fn)
+    elseif lib.kind(a) == k then
+      return merge_operands(lib.get_args(a), {b}, simplify.binary_operator_rec, k, fn)
+    elseif lib.kind(b) == k then
+      return merge_operands({a}, lib.get_args(b), simplify.binary_operator_rec, k, fn)
     end
-  elseif lib.kind(u, 'or') then
-    if (lib.is_const(a) and lib.safe_bool(a, false)) or
-       (lib.is_const(b) and lib.safe_bool(b, false)) then
-      return calc.TRUE
+  elseif #l >= 2 then
+    local w = simplify.binary_operator_rec(util.list.rest(l), k, fn)
+    if lib.kind(a) == k then
+      return merge_operands(lib.get_args(a), w, simplify.binary_operator_rec, k, fn)
+    else
+      return merge_operands({a}, w, simplify.binary_operator_rec, k, fn)
     end
   end
-  return u
+  return l -- unreachable
+end
+
+-- Simplify and merge n-ary operator
+---@param u       Expression   Input expression
+---@param k       Kind         Kind
+---@param fn      function     Calculation function
+---@param neutral Expression?  Neutral element
+---@return        Expression|nil
+function simplify.nary_operator(u, k, fn, neutral)
+  trace_step('nary_operator_'..k, {u, k, neutral})
+
+  if util.set.contains(u, calc.NAN) then
+    return calc.NAN
+  elseif lib.num_args(u) == 1 then
+    return lib.arg(u, 1)
+  else
+    local v = simplify.nary_operator_rec(lib.get_args(u), k, fn) or {}
+    if #v == 1 then
+      return v[1]
+    elseif #v >= 2 then
+      return util.list.join(k, v)
+    elseif #v == 0 then
+      return neutral
+    end
+  end
+end
+
+function simplify.lnot(u)
+  trace_step('lnot', u)
+
+  return calc.lnot(lib.arg(u, 1))
 end
 
 function simplify.relation(u)
   trace_step('relation', u)
 
-  assert(lib.num_args(u) == 2)
+  local a, b = lib.arg(u, 1), lib.arg(u, 2)
 
   -- Transform a<b<c => a<b and b<c if not mixing <> and =
-  local a, b = lib.arg(u, 1), lib.arg(u, 2)
   if lib.is_relop(a) and not lib.is_relop(b) then
     if lib.kind(a, '=', '!=') == lib.kind(u, '=', '!=') then
       local ab = lib.arg(a, 2)
@@ -712,8 +765,12 @@ function simplify.expr(expr, env)
       return simplify.difference(v)
     elseif k == '!' then
       return simplify.factorial(v)
-    elseif k == 'and' or k == 'or' or k == 'not' then
-      return simplify.logical(v)
+    elseif k == 'and' then
+      return simplify.nary_operator(v, k, calc.land)
+    elseif k == 'or' then
+      return simplify.nary_operator(v, k, calc.lor)
+    elseif k == 'not' then
+      return simplify.lnot(v)
     elseif k == 'fn' then
       return simplify.fn(v, env)
     elseif k == '::' then

@@ -18,6 +18,7 @@ require 'fn.iteration'
 require 'fn.memory'
 require 'fn.io'
 require 'fn.expr'
+require 'fn.vec'
 
 
 local function derivative2(u, x)

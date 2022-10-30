@@ -9,6 +9,12 @@ local dbg = require 'dbg'
 
 local functions = { table = {} }
 
+---@enum
+functions.attribs = {
+  plain    = 'plain',
+  no_units = 'no_units',
+}
+
 -- Register lua function
 ---@param name string              Function name
 ---@param args 'var'|number|table  Argument pass mode
@@ -33,7 +39,7 @@ function functions.def_lua(name, args, fn, ...)
       if #a > #args then
         return 'undef'
       end
-      local arg_tab = {}
+      local arg_tab = { num_args = #a }
       for i, v in ipairs(args) do
         local n = a[i]
         arg_tab[v.name] = n
@@ -162,10 +168,9 @@ function functions.reorder_rules(f)
   end
 end
 
-
-
-local function get_attrib(f, name, default)
-  return util.set.contains(f.attribs or {}, name) or default
+function functions.get_attrib(call, name, env)
+  local f = env:get_fn(lib.safe_fn(call))
+  return f and util.set.contains(f.attribs or {}, name)
 end
 
 function functions.call(call, env)
@@ -178,10 +183,7 @@ function functions.call(call, env)
 
   local f = env:get_fn(name)
   if f then
-    if not get_attrib(f, 'plain') then
-      call = lib.map(call, eval.eval, env)
-    end
-    if get_attrib(f, 'no_units') then
+    if functions.get_attrib(f, functions.attribs.no_units, env) then
       call = units.remove_units(call)
     end
 

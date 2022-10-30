@@ -41,6 +41,14 @@ function input.read_expression(str)
     end
   }
 
+  -- Parser for lists/vectors/matrixes
+  parselets['{'] = {
+    prefix = function(p, _)
+      local args = p:parse_list({',', kind='s'}, {'}', kind='s'})
+      return util.list.join({'fn', 'vec'}, args)
+    end
+  }
+
   -- Parser for parentheses
   parselets['('] = {
     prefix = function(p, _)

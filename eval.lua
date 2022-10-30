@@ -7,10 +7,14 @@ local dbg = require 'dbg'
 
 local eval = {}
 
-function eval.store(expr, env)
+function eval.store(expr, eval_rhs, env)
   env = Env.global
 
   local a, b = lib.arg(expr, 1), lib.arg(expr, 2)
+  if eval_rhs then
+    b = eval.eval(b, env)
+  end
+
   if lib.kind(a, 'sym') then
     env:set_var(lib.sym(a), b)
   elseif lib.kind(a, 'fn') then
@@ -29,10 +33,16 @@ function eval.store(expr, env)
 end
 
 function eval.fn(expr, env)
+  -- Evaluate arguments first
+  if not functions.get_attrib(expr, functions.attribs.plain, env) then
+    expr = lib.map(expr, eval.eval, env)
+  end
+
   local u = functions.call(expr, env)
   if u and not lib.compare(expr, u) then
     return eval.eval(u, env)
   end
+
   return expr
 end
 
@@ -40,7 +50,7 @@ function eval.sym(expr, env)
   local s = lib.safe_sym(expr)
   if env then
     local v = env:get_var(s)
-    if v then return (env.approx and v.approx) or v.value end
+    if v then return eval.eval((env.approx and v.approx) or v.value, env) end
   end
   return expr
 end
@@ -50,7 +60,7 @@ function eval.unit(expr, env)
   if env then
     local v = env:get_unit(u)
     if v and v.value then
-      return v.value
+      return eval.eval(v.value, env)
     end
   end
   return expr
@@ -83,14 +93,13 @@ function eval.with_relation(expr, env)
 end
 
 function eval.with(expr, env)
-  local sub_env = Env(env)
-  eval.with_relation(lib.arg(expr, 2), sub_env)
-
-  -- First evaluation with normal env
-  local target = eval.eval(lib.arg(expr, 1), env)
+  local target = lib.arg(expr, 1)
   if lib.is_const(target) then
     return target
   end
+
+  local sub_env = Env(env)
+  eval.with_relation(lib.arg(expr, 2), sub_env)
 
   -- Second evaluation with sub-env
   return eval.eval(target, sub_env)
@@ -104,7 +113,9 @@ function eval.eval_rec(expr, env)
   elseif lib.kind(expr, 'unit') then
     return eval.unit(expr, env)
   elseif lib.kind(expr, ':=') then
-    return eval.store(expr, env)
+    return eval.store(expr, false, env)
+  elseif lib.kind(expr, ':==') then
+    return eval.store(expr, true, env)
   elseif lib.kind(expr, '::') then
     return eval.condition(expr, env)
   elseif lib.kind(expr, '|') then

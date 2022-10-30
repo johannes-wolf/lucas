@@ -131,15 +131,15 @@ function base.make_binary_operator(u, assoc)
 end
 
 -- Get argument offset
----@param u Expression  Kind
----@return number       Internal argument offest
+---@param u Expression|nil  Kind
+---@return number           Internal argument offest
 function base.arg_offset(u)
   return (base.kind(u, 'fn', 'sym', 'unit') and 2) or 1
 end
 
 -- Get number of arguments
----@param u Expression  Kind
----@return number       Number of arguments
+---@param u Expression|nil  Kind
+---@return number           Number of arguments
 function base.num_args(u)
   if base.kind(u, 'int', 'frac', 'real', 'bool', 'unit') then return 0 end
   return u and #u - base.arg_offset(u) or 0
@@ -151,6 +151,19 @@ end
 ---@return Expression|nil
 function base.arg(u, n)
   return u and u[n + base.arg_offset(u)] or nil
+end
+
+-- Set nth arg
+---@param u Expression|nil  Source expression
+---@param n number          Argument indexn (1 based)
+---@param v Expression      Value to set
+---@return  boolean
+function base.set_arg(u, n, v)
+  if base.num_args(u) >= n then
+    u[n + base.arg_offset(u)] = v
+    return true
+  end
+  return false
 end
 
 -- Get arguments as list

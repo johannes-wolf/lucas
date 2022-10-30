@@ -32,26 +32,53 @@ local function parse_index3(index, arg2, arg3)
   end
 end
 
+-- Returns a function for calling fn (expression or function) like a function
+-- If fn is an expression the arguments are passed via $1..$n variables.
+local function make_lambda(fn)
+  if lib.kind(fn, 'fn') then
+    local n = lib.safe_fn(fn)
+    return function(...)
+      return {'fn', n, ...}
+    end
+  elseif lib.is_const(fn) then
+    return function()
+      return fn
+    end
+  else
+    return function(...)
+      local a = {...}
+      local e = fn
+      for i = 1, #a do
+        e = pattern.substitute_var(e, '$'..i, a[i])
+      end
+      return e
+    end
+  end
+end
+
 function algo.map(fn, vec, env)
-  -- map is a plain function
+  -- map is a plain function!
   vec = eval(vec, env)
 
-  local name = lib.safe_sym(fn) or lib.safe_fn(fn)
-  if not name then return nil end
-
-  local rest = lib.kind(fn, 'fn') and lib.get_args(fn, 2)
-
+  local l = make_lambda(fn)
   if lib.num_args(vec) > 0 then
-    return lib.map(vec, function(v)
-      if rest then
-        return eval(util.list.join({'fn', name, v}, rest), env)
-      else
-        return {'fn', name, v}
-      end
-    end)
-  else
-    return {'fn', name, vec}
+    return lib.map(vec, l)
   end
+  return {'vec'}
+end
+
+function algo.sum(fn, vec, env)
+  -- sum is a plain function!
+  fn = fn or {'sym', '$1'}
+  vec = eval(vec, env)
+
+  local l = make_lambda(fn)
+  local e = {'int', 0}
+  for i = 1, lib.num_args(vec) do
+    e = {'+', e, l(lib.arg(vec, i))}
+  end
+  print(dbg.dump(e))
+  return e
 end
 
 function algo.seq(fn, index, start, stop)

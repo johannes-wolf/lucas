@@ -8,14 +8,14 @@ function (a, env)
   return calc.abs(a[1])
 end)
 
-functions.def_lua('eq', 2,
+functions.def_lua('eq', 'var',
 function (a, env)
-  return calc.eq(a[1], a[2])
+  return util.list.join({'='}, a)
 end)
 
-functions.def_lua('neq', 2,
+functions.def_lua('neq', 'var',
 function (a, env)
-  return calc.neq(a[1], a[2])
+  return util.list.join({'!='}, a)
 end)
 
 functions.def_lua('min', 'var',
@@ -46,11 +46,6 @@ end)
 functions.def_lua('real', 1,
 function (a, env)
   return calc.real(a[1])
-end)
-
-functions.def_lua('vec', 'var',
-function (a, env)
-  return util.list.join({'vec'}, a)
 end)
 
 functions.def_lua('sqrt', {{name = 'v'}, {name = 'n'}},
@@ -98,6 +93,16 @@ functions.def_lua('map', {{name = 'fn'},
                           {name = 'vec'}},
 function (a, env)
   return algo.map(a.fn, a.vec, env)
+end, 'plain')
+
+functions.def_lua('sum', {{name = 'fn'},
+                          {name = 'vec'}},
+function (a, env)
+  if a.num_args == 1 then
+    return algo.sum(nil, a.fn, env)
+  else
+    return algo.sum(a.fn, a.vec, env)
+  end
 end, 'plain')
 
 functions.def_lua('seq', {{name = 'fn'},

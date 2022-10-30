@@ -14,6 +14,7 @@ function op.def_operator(sym, name, kind, prec)
 end
 
 op.def_operator(':=',  'assign', 'infix',   1) -- Assignment
+op.def_operator(':==', 'set',    'infix',   1) -- Assignment (evaluated rhs)
 op.def_operator('|',   'with',   'infix',   2) -- With
 
 op.def_operator('or',  'or',     'infix',   3)
