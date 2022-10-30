@@ -7,7 +7,7 @@ function()
   return {'bool', true}
 end)
 
-fn.def_lua('mem.load', 0,
+fn.def_lua('mem.read', 0,
 function()
   local eval = require 'eval'
   local input = require 'input'
@@ -25,7 +25,7 @@ function()
   return {'bool', ok}
 end)
 
-fn.def_lua('mem.store', 0,
+fn.def_lua('mem.write', 0,
 function()
   local f = io.open('.lucas_memory', 'w+')
   if f then

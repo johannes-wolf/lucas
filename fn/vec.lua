@@ -3,6 +3,23 @@ local util = require 'util'
 local lib = require 'lib'
 local calc = require 'calc'
 
+--@alias List table
+local list = {}
+
+function list.head(l)
+  return lib.arg(l, 1) or calc.NAN -- NAN?
+end
+
+function list.rest(l)
+  return util.table.prepend('vec', lib.get_args(l, 2))
+end
+
+function list.slice(l, s, e)
+  s = lib.safe_int(s) or 1
+  e = lib.safe_int(e)
+  return util.table.prepend('vec', util.list.slice(l, lib.arg_offset(l) + s - 1, e))
+end
+
 ---@alias Vector table
 local vector = {
   offset = 1

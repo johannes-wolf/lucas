@@ -55,4 +55,11 @@ function tests.max()
   Expect('max(vec(1,2,3))', '3')
 end
 
+function tests.expand()
+  Expect('expand((x+2)(x+3))', 'x^2+5x+6')
+  Expect('expand(x^4*(x+2))',  'x^5+2x^4')
+  Expect('expand(a*b*(c+d))',  'a b c+a b d')
+  Expect('expand(a*b*(c+d)2)', '2a b c+2a b d')
+end
+
 return tests

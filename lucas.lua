@@ -34,23 +34,26 @@ local function derivative2(u, x)
 end
 
 local env = Env()
+local n = 1
 local ok, err = true, nil
 while true do
   units.compile()
 
   io.write('['..(ok and 'OK ' or 'ERR')..']> ')
-
   local str = io.read('l')
   ok, err = pcall(function()
-      local expr = input.read_expression(str)
-      if expr then
-        local simpl = eval.eval(expr, env)
-        --print('simplified:   '..output.print_sexp(simpl))
-        print('     = '..output.print_alg(simpl))
+    local expr = input.read_expression(str)
+    if expr then
+      local simpl = eval.eval(expr, env)
+      --print('simplified:   '..output.print_sexp(simpl))
 
-        env:set_var('ans', simpl)
-      end
+      print(string.format(' %3d = %s', n, output.print_alg(simpl)))
+      n = n + 1
+
+      env:set_var('ans', simpl)
+    end
   end)
+
   if not ok then
     print('error: '..(err or 'ok'))
     print(debug.traceback())

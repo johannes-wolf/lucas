@@ -3,6 +3,7 @@ local Env = require 'env'
 local simplify = require 'simplify'
 local functions = require 'functions'
 local pattern = require 'pattern'
+local calc = require 'calc'
 local dbg = require 'dbg'
 
 local eval = {}
@@ -26,7 +27,7 @@ function eval.store(expr, eval_rhs, env)
   elseif lib.kind(a, 'unit') then
     env:set_unit(lib.unit(a), b)
   else
-    return 'undef'
+    return calc.NAN
   end
 
   return expr
@@ -71,7 +72,6 @@ function eval.unit(expr, env)
   return expr
 end
 
--- TODO: Implement recursive pattern matching, and allow non symbol patterns!
 function eval.with_assign(expr, env)
   local sym, replacement = lib.arg(expr, 1), lib.arg(expr, 2)
   if lib.kind(sym, 'sym') then

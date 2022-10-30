@@ -15,6 +15,9 @@ end
 function tests.poly_div()
   Expect('poly.div(5x^2+4x+1,2x+3,x)',       '{-7:4+5:2x,25:4}')
   Expect('poly.div(x^3-12x^2+5x+150,x-5,x)', '{x^2-7x-30,0}')
+
+  -- Validated with maxima and emacs-calc
+  Expect('poly.div(6x^6-2x^5-4x^3+3x+3,2x^2+2x-3,x)', '{(12x^4-16x^3+34x^2-66x+117)/4,-(420x-363)/4}')
 end
 
 return tests

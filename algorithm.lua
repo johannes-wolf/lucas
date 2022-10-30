@@ -230,26 +230,29 @@ end
 
 -- Expands products of sums
 --   (x + 2) (x + 3) => x^2 + 5 x + 6
+--         x (x + 1) => x^2 + x
 function algo.expand(u)
   local k = lib.kind(u)
   if k == '*' then
-    local a, b = lib.arg(u, 1), lib.arg(u, 2)
-    if lib.kind(a, '+') or lib.kind(b, '+') then
-      local rest = lib.get_args(u, 3)
-      local aa = lib.kind(a, '+') and lib.get_args(a) or {a}
-      local ba = lib.kind(b, '+') and lib.get_args(b) or {b}
+    local function expand_rec(a, i)
+      local b = lib.arg(u, i)
+      if not b then return a end
 
-      local n = {'+'}
-      for i = 1, #aa do
-        for j = 1, #ba do
-          table.insert(n, { '*', aa[i], ba[j] })
+      if lib.kind(a, '+') or lib.kind(b, '+') then
+        local aa = lib.kind(a, '+') and lib.get_args(a) or { a }
+        local ba = lib.kind(b, '+') and lib.get_args(b) or { b }
+
+        local n = { '+' }
+        for x = 1, #aa do
+          for y = 1, #ba do
+            table.insert(n, { '*', aa[x], ba[y] })
+          end
         end
+        return expand_rec(n, i + 1)
       end
-
-      assert(#n > 1)
-      return util.list.join({'*', n}, rest)
+      return expand_rec({'*', a, b}, i + 1)
     end
-    return u
+    return expand_rec(lib.arg(u, 1), 2)
   else
     return lib.map(u, algo.expand)
   end

@@ -1,12 +1,33 @@
 luCAS - a work-in-progress toy CAS written in lua
 
 Whats works:
-- Basic math (+, -, *, /, ^, !)
+- Basic operations (+, -, *, /, ^, !, =, !=, <, <=, >, >=, ...)
 - Fractions (n:d)
 - Symbolic math
+
+  Automatic simplification and functions for expression manipulation
+    factor_out(a b+c a)
+    expand((3+x)(x+2))
+    map($1^2, {1,2,3})
+
 - Basic unit support (no support for finding matching compound units)
 
-What does not:
+  Some units are defined (see units.lua)
+    1_m + 10_cm
+
 - Polynom division
-- Everything else
-- Infinity handling
+
+  Polynom devision with result and remainder as vector
+    poly.div(x^2+1,x-1,1)
+
+- Pattern matching
+    
+  Definition of function 'sign' with 3 different cases
+    sign(x) :: x < 0 := -1
+    sign(x) :: x > 0 := 1
+    sign(0) := 0
+    
+
+What does not:
+- Everything else :-)
+- Correct infinity handling

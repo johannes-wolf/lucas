@@ -57,6 +57,10 @@ end
 -- Find the highest degree of symbol x
 --   x^2 + x => 2
 function poly.gpe.degree(u, x)
+  if calc.is_zero_p(u) then
+    return calc.NEG_INF
+  end
+
   local r = calc.ZERO
   poly.gpe.each_monom(u, function(m)
     for i = 1, lib.num_args(m) do
@@ -71,6 +75,7 @@ end
 
 -- Return sum of all monom coefficients of x^j
 --   a x + b x + c => a + b
+---@return table
 function poly.gpe.coeff(u, x, j)
   if lib.safe_bool(calc.gt(j, calc.ONE)) then
     x = {'^', x, j}
@@ -110,7 +115,7 @@ end
 
 -- Returns sum of all coefficients of x^(deg(u,x))
 function poly.gpe.leading_coeff(u, x)
-  if lib.compare(u, calc.ZERO) then
+  if calc.is_zero_p(u) then
     return calc.ZERO
   end
 
@@ -145,18 +150,23 @@ function poly.division(u, v, x, env)
   local m = poly.gpe.degree(r, x)
   local n = poly.gpe.degree(v, x)
   local lcv = poly.gpe.leading_coeff(v, x)
+  assert(lcv, 'lcv is nil')
+
   while lib.safe_bool(calc.gteq(m, n)) do
     local lcr = poly.gpe.leading_coeff(r, x)
+    assert(lcr, 'lcr is nil')
 
     local s = eval.str('lcr/lcv', env, {lcr=lcr, lcv=lcv})
-    assert(s)
+    assert(s, 's is nil')
 
     q = eval.str('q+s x^(m-n)', env, {q=q, s=s, x=x, m=m, n=n})
-    assert(q)
+    assert(q, 'q is nil')
 
+    -- FIXME: Some divisions return wrong results!
+    --  TEST: poly.div(6x^6-2x^5-4x^3+3x+3,2x^2+2x-3,x)
+    --        EXPECTED {3x^3-x^2-3x+7:2, 3x^2-13x+27:2}
     local vars = {r=r, lcr=lcr, x=x, m=m, v=v, lcv=lcv, n=n, s=s}
-    local e = eval.str('(r-lcr x^m) - (v-lcv x^n) s x^(m-n)', env, vars)
-    r = algo.expand(e)
+    r = eval.str('expand((r-(lcr x^m)) - (v-(lcv x^n)) s x^(m-n))', env, vars)
     m = poly.gpe.degree(r, x)
   end
   return q, r

@@ -237,7 +237,7 @@ function simplify.rne_rec(u)
     return u
   elseif k == 'frac' then
     if u[3] == 0 then
-      return 'undef'
+      return calc.DIV_ZERO
     else
       return u
     end
@@ -245,8 +245,8 @@ function simplify.rne_rec(u)
     return u
   elseif lib.num_args(u) == 1 then
     local v = simplify.rne_rec(u[2])
-    if v == 'undef' then
-      return 'undef'
+    if calc.is_nan_p(v) then
+      return calc.NAN
     elseif lib.kind(v, '+') then
       return v
     elseif lib.kind(v, '-') then
@@ -255,8 +255,8 @@ function simplify.rne_rec(u)
   elseif lib.num_args(u) == 2 then
     if lib.kind(u, '+', '*', '-', '/') then
       local v, w = simplify.rne_rec(u[2]), simplify.rne_rec(u[3])
-      if v == 'undef' or w == 'undef' then
-        return 'undef'
+      if calc.is_nan_p(v) or calc.is_nan_p(w) then
+        return calc.NAN
       else
         if lib.kind(u, '+') then
           return calc.sum(v, w)
@@ -270,8 +270,8 @@ function simplify.rne_rec(u)
       end
     elseif lib.kind(u, '^') then
       local v = simplify.rne_rec(lib.arg(u, 1))
-      if v == 'undef' then
-        return 'undef'
+      if calc.is_nan_p(v) then
+        return v
       end
       return calc.pow(v, lib.arg(u, 2))
     end
@@ -283,8 +283,8 @@ function simplify.rne(u)
   trace_step('rne', u)
 
   local v = simplify.rne_rec(u)
-  if v == 'undef' then
-    return 'undef'
+  if calc.is_nan_p(v) then
+    return v
   end
   return simplify.rational_number(v)
 end
@@ -361,8 +361,8 @@ function simplify.product(expr)
 
   assert(lib.kind(expr, '*'))
 
-  if util.set.contains(expr, 'undef') then
-    return 'undef'
+  if util.set.contains(expr, calc.NAN) then
+    return calc.NAN
   elseif util.set.contains(expr, {'int', 0}) then
     return {'int', 0}
   elseif lib.num_args(expr) == 1 then
@@ -466,8 +466,8 @@ function simplify.sum(u)
 
   assert(lib.kind(u, '+'))
 
-  if util.set.contains(u, 'undef') then
-    return 'undef'
+  if util.set.contains(u, calc.NAN) then
+    return calc.NAN
   elseif lib.num_args(u) == 1 then
     return u[2]
   else

@@ -9,6 +9,8 @@ local dbg = require 'dbg'
 
 local functions = { table = {} }
 
+functions.ARGUMENT_ERR = {'sym', 'argument_err'}
+
 ---@enum
 functions.attribs = {
   plain    = 'plain',
@@ -29,15 +31,15 @@ function functions.def_lua(name, args, fn, ...)
     end
   elseif type(args) == 'number' then
     new_fn = function(a, env)
-      if #a ~= args then
-        return 'undef'
+      if a and #a ~= args then
+        return functions.ARGUMENT_ERR -- FIXME: Do not use symbols here
       end
       return fn(a, env)
     end
   elseif type(args) == 'table' then
     new_fn = function(a, env)
-      if #a > #args then
-        return 'undef'
+      if a and #a > #args then
+        return functions.ARGUMENT_ERR -- FIXME: Do not use symbols here
       end
       local arg_tab = { num_args = #a }
       for i, v in ipairs(args) do
