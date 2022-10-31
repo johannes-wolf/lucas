@@ -1,11 +1,10 @@
 local functions = require 'functions'
 local operator = require 'operator'
-local pattern = require 'pattern'
-local Env = require 'env'
+local util = require 'util'
 local algo = require 'algorithm'
 local lib = require 'lib'
 local g = require 'global'
-local dbg = require 'dbg'
+
 
 functions.def_lua('op', 2,
 function (a, _)
@@ -37,4 +36,9 @@ end)
 functions.def_lua('free_of', 2,
 function (a, _)
   return algo.free_of(a[1], a[2])
+end)
+
+functions.def_lua('substitute', 'var',
+function (a, _)
+  return algo.subs_sym(a[1], util.list.slice(a, 2))
 end)

@@ -48,7 +48,17 @@ function eval.store(expr, eval_rhs, env)
   return expr
 end
 
+-- The function 'hold' suppresses evaluation for its argument one time.
+function eval.fn_hold(expr)
+  return lib.arg(expr, 1)
+end
+
 function eval.fn(expr, env)
+  -- Hardcoded path for 'hold'
+  if lib.safe_fn(expr) == 'hold' then
+    return eval.fn_hold(expr)
+  end
+
   -- Evaluate arguments first
   if not functions.get_attrib(expr, functions.attribs.plain, env) then
     expr = lib.map(expr, eval.eval, env)
@@ -152,7 +162,8 @@ end
 ---@return Expression|nil
 function eval.eval(expr, env)
   if not expr then return nil end
-  return simplify.expr(eval.eval_rec(simplify.expr(expr, env), env), env)
+  local r = simplify.expr(eval.eval_rec(simplify.expr(expr, env), env), env)
+  return r
 end
 
 -- Evaluate expression string

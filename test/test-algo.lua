@@ -3,24 +3,24 @@ local tests = {}
 require 'fn.math'
 
 function tests.seq()
-  Expect('seq(x, x, 1, 10)',  'vec(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)')
-  Expect('seq(x^2, x, 1, 3)', 'vec(1, 4, 9)')
-  Expect('seq(x^2, x=1, 3)',  'vec(1, 4, 9)')
-  Expect('seq(x^2, y, 1, 3)', 'vec(x^2, x^2, x^2)')
-  Expect('seq(x, x, 3, 1)',   'vec()')
+  Expect('seq(x_, x_, 1, 10)',  'vec(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)')
+  Expect('seq(x_^2, x_, 1, 3)', 'vec(1, 4, 9)')
+  Expect('seq(x_^2, x_=1, 3)',  'vec(1, 4, 9)')
+  Expect('seq(x_^2, y_, 1, 3)', 'vec(x_^2, x_^2, x_^2)')
+  Expect('seq(x_, x_, 3, 1)',   'vec()')
 end
 
 function tests.map()
-  Expect('map(sin(x),      vec(1, 2, 3))', 'vec(sin(1), sin(2), sin(3))')
-  Expect('map(f(x,1)|x=$1, vec(1, 2, 3))', 'vec(f(1,1), f(2,1), f(3,1))')
+  Expect('map(sin($1_), vec(1, 2, 3))', 'vec(sin(1), sin(2), sin(3))')
+  Expect('map(f($1_,1), vec(1, 2, 3))', 'vec(f(1,1), f(2,1), f(3,1))')
 end
 
 function tests.sum_seq()
-  Expect('sum_seq(x, x=1, 5)', '1+2+3+4+5')
+  Expect('sum_seq(x_, x_=1, 5)', '1+2+3+4+5')
 end
 
 function tests.prod_seq()
-  Expect('prod_seq(x, x=1, 5)', '1*2*3*4*5')
+  Expect('prod_seq(x_, x_=1, 5)', '1*2*3*4*5')
 end
 
 function tests.derivative()

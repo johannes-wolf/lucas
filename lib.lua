@@ -23,24 +23,45 @@ function base.safe_bool(val, def)
   return def
 end
 
----@reutrn number|nil
+---@return number|nil
 function base.safe_int(val)
   if base.kind(val, 'int') then return val[2] end
 end
 
----@reutrn string|nil
+---@return number
+function base.expect_int(val)
+  return base.safe_int(val) or error('Expected integer, got '..base.kind(val))
+end
+
+---@return string|nil
 function base.safe_sym(val)
   if base.kind(val, 'sym', 'tmp') then return base.sym(val) end
 end
 
----@reutrn string|nil
+---@return string|nil
+function base.safe_tmp(val)
+  if base.kind(val, 'tmp') then return base.sym(val) end
+end
+
+---@return string|nil
+function base.expect_tmp(val)
+  return base.safe_tmp(val) or error('Expected template, got '..base.kind(val))
+end
+
+---@return string|nil
 function base.safe_unit(val)
   if base.kind(val, 'unit') then return base.unit(val) end
 end
 
----@reutrn string|nil
+---@return string|nil
 function base.safe_fn(val)
   if base.kind(val, 'fn') then return base.fn(val) end
+end
+
+---@return any
+function base.expect_kind(val, k)
+  if base.kind(val) ~= k then error('Expected '..k..', got '..base.kind(val)) end
+  return val
 end
 
 -- Get (or compare) expression kind
@@ -282,11 +303,12 @@ end
 ---@param u Expression
 ---@param k Kind
 ---@param n number
----@return  Expression[]|nil
+---@return  Expression|nil, Expression|nil, ...
 function base.split_args_if(u, k, n)
   if base.kind(u, k) and base.num_args(u) == n then
     return table.unpack(u, base.arg_offset(u) + 1)
   end
+  return nil
 end
 
 -- Find arg for which fn returns true
@@ -301,8 +323,10 @@ function base.find_arg(l, fn, ...)
   end
 end
 
-function base.copy_args(a, b)
-  for i = 1, base.num_args(a) do
+function base.copy_args(a, b, start, stop)
+  start = start or 1
+  stop = stop or base.num_args(a)
+  for i = start, stop do
     table.insert(b, base.arg(a, i))
   end
   return b
@@ -310,6 +334,12 @@ end
 
 function base.make_list(...)
   return {'vec', ...}
+end
+
+function base.make_list_n(s, v)
+  local l = {'vec'}
+  for _ = 1, s or 0 do table.insert(l, v) end
+  return l
 end
 
 function base.sort_list(l, fn)

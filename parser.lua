@@ -79,7 +79,7 @@ local function parse(tokens, parselets)
       error('No parser for token ' .. (t.kind or 'nil'))
     end
     if not p.prefix then
-      error('No prefix parser for token ' .. (t.kind or 'nil'))
+      error('No prefix parser for token ' .. (t.kind or 'nil') .. ' '.. (t[1] or 'nil'))
     end
 
     local left = p.prefix(self, t)

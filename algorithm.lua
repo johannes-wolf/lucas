@@ -20,14 +20,15 @@ end
 
 -- Parse 3 arguments of type index, start, stop
 -- Supporting the following combinations
---   index, start, stop
---   index=start, stop
+--   index_, start, stop
+--   index_= start, stop
 local function parse_index3(index, arg2, arg3)
-  if lib.kind(index, 'sym') then
+  if lib.kind(index, 'tmp') then
     return index, arg2, arg3
   elseif lib.kind(index, '=') then
-    local eq_sym = lib.safe_sym(lib.arg(index, 1))
-    local eq_start = lib.safe_int(lib.arg(index, 2))
+    local eq_sym, eq_start = lib.split_args_if(index, '=', 2)
+    eq_sym = lib.kind(eq_sym, 'tmp') and lib.safe_sym(eq_sym)
+    eq_start = lib.safe_int(eq_start)
     if eq_sym and eq_start then
       return lib.arg(index, 1), lib.arg(index, 2), arg2
     end
@@ -37,12 +38,7 @@ end
 -- Returns a function for calling fn (expression or function) like a function
 -- If fn is an expression the arguments are passed via $1..$n variables.
 local function make_lambda(fn)
-  if lib.kind(fn, 'fn') then
-    local n = lib.safe_fn(fn)
-    return function(...)
-      return {'fn', n, ...}
-    end
-  elseif lib.is_const(fn) then
+  if lib.is_const(fn) then
     return function()
       return fn
     end
@@ -51,11 +47,32 @@ local function make_lambda(fn)
       local a = {...}
       local e = fn
       for i = 1, #a do
-        e = pattern.substitute_var(e, '$'..i, a[i])
+        e = pattern.substitute_tmp(e, '$'..i..'_', a[i])
       end
       return e
     end
   end
+end
+
+-- Substitute all symbols in expr with x=y list rest entry
+function algo.subs_sym(expr, rest)
+  local sp = {}
+  for _, v in ipairs(rest) do
+    local sym, repl = lib.split_args_if(v, '=', 2)
+    sym = lib.safe_sym(sym)
+    if sym and repl then
+      sp[sym] = repl
+    end
+  end
+
+  local function subs_sym_rec(u)
+    if lib.kind(u, 'sym') then
+      return sp[lib.safe_sym(u)] or u
+    else
+      return lib.map(u, subs_sym_rec)
+    end
+  end
+  return subs_sym_rec(expr)
 end
 
 function algo.map(fn, vec, env)
@@ -89,14 +106,18 @@ function algo.seq(fn, index, start, stop)
   start = lib.safe_int(start)
   stop  = lib.safe_int(stop)
 
-  if start > stop then
+  if not fn or not start or not stop or not index then
+    return nil
+  end
+  if not start or start > stop then
     return {'vec'}
   end
 
   local v = {'vec'}
   for n = start, stop do
-    table.insert(v, pattern.substitute_var(fn, index, {'int', n}))
+    table.insert(v, pattern.substitute_tmp(fn, index, {'int', n}))
   end
+
   return v
 end
 
@@ -110,9 +131,9 @@ function algo.sum_seq(fn, index, start, stop)
     return {'int', 0}
   end
 
-  local res = pattern.substitute_var(fn, index, {'int', start})
+  local res = pattern.substitute_tmp(fn, index, {'int', start})
   for n = start + 1, stop do
-    res = {'+', res, pattern.substitute_var(fn, index, {'int', n})}
+    res = {'+', res, pattern.substitute_tmp(fn, index, {'int', n})}
   end
 
   return res
@@ -128,9 +149,9 @@ function algo.prod_seq(fn, index, start, stop)
     return {'int', 1}
   end
 
-  local res = pattern.substitute_var(fn, index, {'int', start})
+  local res = pattern.substitute_tmp(fn, index, {'int', start})
   for n = start + 1, stop do
-    res = {'*', res, pattern.substitute_var(fn, index, {'int', n})}
+    res = {'*', res, pattern.substitute_tmp(fn, index, {'int', n})}
   end
 
   return res

@@ -19,8 +19,9 @@ function Parse(str)
 end
 
 function Expect(ou, ov)
-  local u = (type(ou) == 'string' and Parse(ou)) or eval.eval(ou, Env())
-  local v = (type(ov) == 'string' and Parse(ov)) or eval.eval(ov, Env())
+  local env = Env()
+  local u = (type(ou) == 'string' and Parse(ou)) or eval.eval(ou, env)
+  local v = (type(ov) == 'string' and Parse(ov)) or eval.eval(ov, env)
 
   if not lib.compare(u, v) then
     test.info('input: '..dbg.dump((type(ou) == 'string' and Parse(ou)) or ou))
@@ -36,5 +37,9 @@ add_tests 'test-algo'
 add_tests 'test-relational'
 add_tests 'test-poly'
 add_tests 'test-pattern'
+add_tests 'test-list'
+add_tests 'test-dict'
+add_tests 'test-matrix'
+add_tests 'test-vector'
 
 test.run(tests)

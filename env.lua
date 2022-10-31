@@ -69,17 +69,13 @@ function Env:set_fn(name, pattern, expr, reset, override)
     self.fn[name] = nil
   end
 
-  if lib.safe_fn(expr) == name then
-    self.fn[name] = nil
-  else
-    self.fn[name] = self.fn[name] or { rules = {} }
-    local f = self.fn[name]
-    local rule = require 'rule'
-    table.insert(f.rules, rule.make(pattern, expr))
+  self.fn[name] = self.fn[name] or { rules = {} }
+  local f = self.fn[name]
+  local rule = require 'rule'
+  table.insert(f.rules, rule.make(pattern, expr))
 
-    local functions = require 'functions'
-    functions.reorder_rules(f)
-  end
+  local functions = require 'functions'
+  functions.reorder_rules(f)
 end
 
 -- Store unit name => expr

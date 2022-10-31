@@ -6,6 +6,11 @@ local dbg = require 'dbg'
 
 local poly = { gpe = {} }
 
+local function S(expr, env)
+  local s = require 'simplify'
+  return s.expr(expr, env)
+end
+
 local function exponent(u)
   if lib.kind(u, '^') then
     return lib.arg(u, 2)
@@ -145,6 +150,8 @@ end
 function poly.division(u, v, x, env)
   local eval = require 'eval'
 
+  -- TODO: Test if u and v are polynoms
+
   local q = calc.ZERO
   local r = u
   local m = poly.gpe.degree(r, x)
@@ -162,9 +169,6 @@ function poly.division(u, v, x, env)
     q = eval.str('q+s x^(m-n)', env, {q=q, s=s, x=x, m=m, n=n})
     assert(q, 'q is nil')
 
-    -- FIXME: Some divisions return wrong results!
-    --  TEST: poly.div(6x^6-2x^5-4x^3+3x+3,2x^2+2x-3,x)
-    --        EXPECTED {3x^3-x^2-3x+7:2, 3x^2-13x+27:2}
     local vars = {r=r, lcr=lcr, x=x, m=m, v=v, lcv=lcv, n=n, s=s}
     r = eval.str('expand((r-(lcr x^m)) - (v-(lcv x^n)) s x^(m-n))', env, vars)
     m = poly.gpe.degree(r, x)
@@ -172,4 +176,14 @@ function poly.division(u, v, x, env)
   return q, r
 end
 
+function poly.expand(u, v, x, t, env)
+  assert(lib.safe_bool(calc.gt(poly.gpe.degree(v, x), {'int', 0})))
+
+  if calc.is_zero_p(u) then
+    return calc.ZERO
+  else
+    local q, r = poly.division(u, v, x, env)
+    return S(algo.expand({'+', {'*', t, poly.expand(q, v, x, t, env)}, r}), env)
+  end
+end
 return poly

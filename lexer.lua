@@ -1,3 +1,5 @@
+local operators = require 'operator'
+
 local function parse_whitespace(s, i)
   return s:find('^%s*', i)
 end
@@ -46,18 +48,14 @@ local function parse_float(s, i)
 end
 
 local function parse_operator(s, i)
-  local t = {
-    ':==', ':=',
-    '::', '|',
-    'and', 'or', 'not',
-    '=', '!=',
-    '<=', '<', '>=', '>',
-    '+', '-', '*', '/', '^',
-    '!',
-  }
-
-  for _, text in ipairs(t) do
-    if s:sub(i, i + text:len() - 1) == text then
+  for _, text in ipairs(operators.symbols) do
+    if text:find('^%w+') then
+      if string.find(s, '^'..text..'[^%w]', i) then
+        if s:sub(i, i + text:len() - 1) == text then
+          return i, i + text:len() - 1, text
+        end
+      end
+    elseif s:sub(i, i + text:len() - 1) == text then
       return i, i + text:len() - 1, text
     end
   end

@@ -20,4 +20,8 @@ function tests.poly_div()
   Expect('poly.div(6x^6-2x^5-4x^3+3x+3,2x^2+2x-3,x)', '{(12x^4-16x^3+34x^2-66x+117)/4,-(420x-363)/4}')
 end
 
+function tests.poly_expand()
+  Expect('poly.expand(86+x^5+11x^4+51x^3+124x^2+159x, 5+x^2+4x, x,t)', '1+3t^2+2t+x+t^2 x+t x')
+end
+
 return tests

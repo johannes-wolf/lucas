@@ -40,7 +40,7 @@ function(a, env)
 
   local res = a.start
   for _ = 1, n do
-    res = eval.eval(pattern.substitute_var(a.fn, var, res), env)
+    res = eval.eval(pattern.substitute_tmp(a.fn, var, res), env)
   end
   return res
 end)

@@ -44,7 +44,7 @@ function (a, _)
   local d = a.dict
   for i = 1, lib.num_args(d) do
     if lib.compare(lib.arg(lib.arg(d, i), 1), a.key) then
-      table.insert(l, lib.arg(d, 2))
+      table.insert(l, lib.arg(lib.arg(d, i), 2))
     end
   end
   return l

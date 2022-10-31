@@ -33,3 +33,11 @@ functions.def_lua('poly.div', {{name = 'u'},
 function (a, env)
   return {'vec', poly.division(a.u, a.v, a.x, env)}
 end)
+
+functions.def_lua('poly.expand', {{name = 'u'},
+                                  {name = 'v'},
+                                  {name = 'x', match = 'is_sym'},
+                                  {name = 't', match = 'is_sym'}},
+function (a, env)
+  return poly.expand(a.u, a.v, a.x, a.t, env)
+end)

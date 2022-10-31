@@ -2,6 +2,7 @@ local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
 local functions = require 'functions'
+local op = require 'operator'
 local dbg = require 'dbg'
 
 local function trace_step(step, ...)
@@ -124,8 +125,8 @@ local function order_before(u, v)
 
   if lib.is_const(u) and lib.is_const(v) then
     return lib.safe_bool(calc.lt(u, v))
-  elseif lib.kind(u, 'tmp') and lib.kind(v, 'tmp') then
-    return false
+  elseif lib.kind(u, 'tmp') and not lib.kind(u, 'unit') then
+    return false -- Do not order placeholder alphabeticaly!
   elseif lib.kind(u, 'sym') and lib.kind(v, 'sym') or
          lib.kind(u, 'unit') and lib.kind(v, 'unit') then
     return u[2] < v[2]
@@ -623,18 +624,18 @@ function simplify.nary_operator_rec(l, k, fn)
     end
   elseif #l == 2 then
     if lib.kind(a) == k and lib.kind(b) == k then
-      return merge_operands(lib.get_args(a), lib.get_args(b), simplify.binary_operator_rec, k, fn)
+      return merge_operands(lib.get_args(a), lib.get_args(b), simplify.nary_operator_rec, k, fn)
     elseif lib.kind(a) == k then
-      return merge_operands(lib.get_args(a), {b}, simplify.binary_operator_rec, k, fn)
+      return merge_operands(lib.get_args(a), {b}, simplify.nary_operator_rec, k, fn)
     elseif lib.kind(b) == k then
-      return merge_operands({a}, lib.get_args(b), simplify.binary_operator_rec, k, fn)
+      return merge_operands({a}, lib.get_args(b), simplify.nary_operator_rec, k, fn)
     end
   elseif #l >= 2 then
-    local w = simplify.binary_operator_rec(util.list.rest(l), k, fn)
+    local w = simplify.nary_operator_rec(util.list.rest(l), k, fn)
     if lib.kind(a) == k then
-      return merge_operands(lib.get_args(a), w, simplify.binary_operator_rec, k, fn)
+      return merge_operands(lib.get_args(a), w, simplify.nary_operator_rec, k, fn)
     else
-      return merge_operands({a}, w, simplify.binary_operator_rec, k, fn)
+      return merge_operands({a}, w, simplify.nary_operator_rec, k, fn)
     end
   end
   return l -- unreachable
@@ -741,6 +742,18 @@ function simplify.condition(u, env)
   return {'fn', 'cond', a, b}
 end
 
+-- Returns a table with expression expr, env and a convenient
+-- method to call simplify on it.
+local function forward_expression(expr, env)
+  return {
+    env = env,
+    expr = expr,
+    simplify = function(self, opt_env)
+      return lib.map(self.expr, simplify.expr, opt_env or self.env)
+    end
+  }
+end
+
 function simplify.expr(expr, env)
   trace_step('expr', expr)
   assert(expr and env)
@@ -760,8 +773,16 @@ function simplify.expr(expr, env)
   elseif lib.kind(expr, 'fn') then
     return simplify.fn(expr, env)
   else
+    local k = lib.kind(expr)
+
+    -- Call registered operator
+    local o = op.table[k]
+    if o and o.simplify then
+      return o.simplify(forward_expression(expr, env))
+    end
+
+    -- Call fixed simplification
     local v = lib.map(expr, simplify.expr, env)
-    local k = lib.kind(v)
     if k == '^' then
       return simplify.power(v)
     elseif k == '*' then

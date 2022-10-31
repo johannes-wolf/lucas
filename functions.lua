@@ -2,7 +2,6 @@ local lib = require 'lib'
 local units = require 'units'
 local calc = require 'calc'
 local pattern = require 'pattern'
-local algo = require 'algorithm'
 local util = require 'util'
 local Env = require 'env'
 local dbg = require 'dbg'
@@ -18,17 +17,20 @@ functions.attribs = {
 
 functions.match = {
   if_sym       = function(v) return lib.kind(v, 'sym') end,
+  if_tmp       = function(v) return lib.kind(v, 'tmp') end,
   if_unit      = function(v) return lib.kind(v, 'unit') end,
   if_const     = function(v) return lib.is_const(v) end,
   if_container = function(v) return lib.is_container(v) end,
   if_natnum0   = function(v) return calc.is_natnum_p(v, true) end,
   if_natnum1   = function(v) return calc.is_natnum_p(v, false) end,
+  if_equation  = function(v) return lib.is_relop(v) end,
 }
 
 functions.transform = {
   as_int  = function(v) return calc.integer(v) end,
   as_real = function(v) return calc.real(v) end,
 }
+
 
 local function get_argument(name, idx, arg, spec)
   if spec.match and not spec.match(arg) then
@@ -254,7 +256,12 @@ function functions.call(call, env)
 
     if f.fn then
       -- Lua based function
-      return f.fn(lib.get_args(call) or {}, env)
+      local ok, res = pcall(f.fn, lib.get_args(call) or {}, env)
+      if ok then
+        return res
+      elseif type(res) == 'string' then
+        g.error(res)
+      end
     end
   end
   return nil

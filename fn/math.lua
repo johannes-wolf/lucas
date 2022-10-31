@@ -2,6 +2,7 @@ local calc = require 'calc'
 local algo = require 'algorithm'
 local util = require 'util'
 local functions = require 'functions'
+local g = require 'global'
 
 functions.def_lua('abs', 1,
 function (a, _)
@@ -76,7 +77,7 @@ function (a, _)
 end)
 
 functions.def_lua('sum_seq', {{name = 'fn'},
-                              {name = 'index', match = 'is_sym'},
+                              {name = 'index', match = 'is_tmp'},
                               {name = 'start'},
                               {name = 'stop', opt = true}},
 function (a, env)
@@ -84,7 +85,7 @@ function (a, env)
 end)
 
 functions.def_lua('prod_seq', {{name = 'fn'},
-                               {name = 'index', match = 'is_sym'},
+                               {name = 'index', match = 'is_tmp'},
                                {name = 'start'},
                                {name = 'stop', opt = true}},
 function (a, _)
@@ -108,9 +109,39 @@ function (a, env)
 end, 'plain')
 
 functions.def_lua('seq', {{name = 'fn'},
-                          {name = 'index', match = 'is_sym'},
+                          {name = 'index', match = 'is_tmp'},
                           {name = 'start'},
                           {name = 'stop', opt = true}},
 function (a, _)
   return algo.seq(a.fn, a.index, a.start, a.stop)
 end)
+
+-- cases
+--   cases([cond1, then1] ..., else)
+--
+--   Then actions are lazy evaluated!
+functions.def_lua('cases', 'var',
+function (a, env)
+  local eval = require 'eval'
+
+  if #a == 0 then
+    g.error('cases: No cases')
+    return
+  elseif #a % 2 == 0 then
+    g.error('cases: Missing default case')
+    return
+  end
+
+  for i = 1, #a - 1, 2 do
+    local cond = a[i]
+    local repl = a[i+1]
+
+    cond = eval.eval(cond, env)
+    if calc.is_true_p(cond) then
+      return eval.eval(repl, env)
+    end
+  end
+
+  -- Evaluate default case
+  return eval.eval(a[#a], env)
+end, functions.attribs.plain)

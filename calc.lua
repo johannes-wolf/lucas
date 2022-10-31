@@ -58,7 +58,7 @@ end
 -- Returns if a is 'true'
 ---@param a Expression
 ---@return  boolean
-local function is_true_p(a)
+function calc.is_true_p(a)
   if lib.is_const(a) then
     if lib.kind(a, 'bool') then
       return lib.safe_bool(a)
@@ -819,11 +819,19 @@ function calc.abs(x)
   return {'fn', 'abs', x}
 end
 
+function calc.bool(a)
+  if lib.is_const(a) then
+    return {'bool', calc.is_true_p(a)}
+  else
+    return a
+  end
+end
+
 function calc.land(a, b)
-  if is_true_p(a) and is_true_p(b) then
+  if calc.is_true_p(a) and calc.is_true_p(b) then
     return b
   elseif lib.is_const(a) and lib.is_const(b) then
-    if is_true_p(a) then
+    if calc.is_true_p(a) then
       return b
     else
       return a
@@ -833,9 +841,9 @@ function calc.land(a, b)
 end
 
 function calc.lor(a, b)
-  if is_true_p(a) then
+  if calc.is_true_p(a) then
     return a
-  elseif is_true_p(b) then
+  elseif calc.is_true_p(b) then
     return b
   elseif lib.is_const(a) and lib.is_const(b) then
     return b
@@ -845,7 +853,7 @@ end
 
 function calc.lnot(a)
   if lib.is_const(a) then
-    return {'bool', not is_true_p(a)}
+    return {'bool', not calc.is_true_p(a)}
   end
   return {'not', a}
 end

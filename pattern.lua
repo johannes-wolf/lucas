@@ -28,7 +28,7 @@ local function match_rec(expr, parent, index, p, quote, vars)
   local function eval_bool(cnd)
     local eval = require 'eval'
     for k, v in pairs(vars) do
-      cnd = pattern.substitute_var(cnd, k, v.expr)
+      cnd = pattern.substitute_tmp(cnd, k, v.expr)
     end
     return lib.safe_bool(eval.eval(cnd, Env()), false)
   end
@@ -136,7 +136,7 @@ end
 ---@param expr Expression  Expression
 ---@param var  string      Symbol name
 ---@param with Expression  Replacement
-function pattern.substitute_var(expr, var, with)
+function pattern.substitute_tmp(expr, var, with)
   return substitute_rec(expr, false, {[var] = {expr = with}})
 end
 
