@@ -1,7 +1,7 @@
 local tests = {}
 
 function tests.poly_variables()
-  Expect('poly.vars(3x+a+sin(x))', '{a,x,sin(x)}')
+  Expect('poly.vars(3x+a+sin(x))', '{a,sin(x),x}')
 end
 
 function tests.poly_degree()
@@ -21,7 +21,7 @@ function tests.poly_div()
 end
 
 function tests.poly_expand()
-  Expect('poly.expand(86+x^5+11x^4+51x^3+124x^2+159x, 5+x^2+4x, x,t)', '1+3t^2+2t+x+t^2 x+t x')
+  Expect('poly.expand(86+x^5+11x^4+51x^3+124x^2+159x, 5+x^2+4x, x,t)', '1+3t^2+2t+x+t x+t^2 x')
 end
 
 return tests

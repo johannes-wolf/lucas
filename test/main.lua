@@ -19,19 +19,22 @@ function Parse(str)
 end
 
 function Expect(ou, ov)
+  local out = require 'output'
   local env = Env()
   local u = (type(ou) == 'string' and Parse(ou)) or eval.eval(ou, env)
   local v = (type(ov) == 'string' and Parse(ov)) or eval.eval(ov, env)
 
   if not lib.compare(u, v) then
-    test.info('input: '..dbg.dump((type(ou) == 'string' and Parse(ou)) or ou))
-    test.info('   is: '..dbg.dump(u)..', expected: '..dbg.dump(v))
+    test.info('   input: '..(type(ou) ~= 'string' and dbg.dump(Parse(ou)) or ou))
+    test.info('      is: '..out.print_alg(u))--..' = '..dbg.dump(u))
+    test.info('expected: '..out.print_alg(v))--..' = '..dbg.dump(v))
     test.assert(false)
   end
 end
 
 require 'fn.all'
 
+add_tests 'test-calc'
 add_tests 'test-simplify'
 add_tests 'test-algo'
 add_tests 'test-relational'

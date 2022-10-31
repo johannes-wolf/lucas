@@ -76,4 +76,21 @@ function Test.run(tests)
   end
 end
 
+function Test.FALSE(a, message)
+  return Test.assert(not a)
+end
+
+function Test.TRUE(a, message)
+  return Test.assert(a)
+end
+
+function Test.EQ(a, b, message)
+  return Test.assert(a == b)
+end
+
+function Test.NEQ(a, b, message)
+  return Test.assert(a == b)
+end
+
+
 return Test

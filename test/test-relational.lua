@@ -46,14 +46,14 @@ function tests.lt()
   -- Everything but inf is < inf
   Expect('1<inf',    'true')
   Expect('a<inf',    'true')
-  Expect('ninf<inf', 'true')
+  Expect('-inf<inf', 'true')
   Expect('inf<inf',  'false')
 
   -- Everything but ninf is not < ninf
-  Expect('1<ninf',   'false')
-  Expect('a<ninf',   'false')
-  Expect('ninf<ninf','false')
-  Expect('inf<ninf', 'true')
+  Expect('1<-inf',   'false')
+  Expect('a<-inf',   'false')
+  Expect('-inf<-inf','false')
+  Expect('inf<-inf', 'true')
 end
 
 function tests.gt()
@@ -77,14 +77,14 @@ function tests.gt()
   -- Everything but inf is > inf
   Expect('1>inf',    'false')
   Expect('a>inf',    'false')
-  Expect('ninf>inf', 'false')
+  Expect('-inf>inf', 'false')
   Expect('inf>inf',  'true')
 
   -- Everything but ninf is not > ninf
-  Expect('1>ninf',   'true')
-  Expect('a>ninf',   'true')
-  Expect('ninf>ninf','true')
-  Expect('inf>ninf', 'false')
+  Expect('1>-inf',   'true')
+  Expect('a>-inf',   'true')
+  Expect('-inf>-inf','true')
+  Expect('inf>-inf', 'false')
 end
 
 return tests

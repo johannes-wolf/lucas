@@ -2,17 +2,20 @@ local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
 local pattern = require 'pattern'
+local g = require 'global'
 local dbg = require 'dbg'
 
 local algo = {}
 
-local function auto_simp(x, env)
-  assert(x and env)
+-- Simplify expression
+local function S(x, env)
+  local Env = require 'env'
   local s = require 'simplify'
-  return s.expr(x, env)
+  return s.expr(x, env or Env())
 end
 
-local function eval(x, env)
+-- Eval expression
+local function E(x, env)
   assert(x and env)
   local s = require 'eval'
   return s.eval(x, env)
@@ -77,7 +80,7 @@ end
 
 function algo.map(fn, vec, env)
   -- map is a plain function!
-  vec = eval(vec, env)
+  vec = E(vec, env)
 
   local l = make_lambda(fn)
   if lib.num_args(vec) > 0 then
@@ -89,14 +92,13 @@ end
 function algo.sum(fn, vec, env)
   -- sum is a plain function!
   fn = fn or {'sym', '$1'}
-  vec = eval(vec, env)
+  vec = E(vec, env)
 
   local l = make_lambda(fn)
   local e = {'int', 0}
   for i = 1, lib.num_args(vec) do
     e = {'+', e, l(lib.arg(vec, i))}
   end
-  print(dbg.dump(e))
   return e
 end
 
@@ -159,8 +161,8 @@ end
 
 -- Find a common factor for u and v
 function algo.common_factor(u, v, env)
-  u = auto_simp(u, env)
-  v = auto_simp(v, env)
+  u = S(u, env)
+  v = S(v, env)
 
   if lib.kind(u, 'int') and lib.kind(v, 'int') then
     return calc.gcd(u, v)
@@ -188,7 +190,7 @@ function algo.common_factor(u, v, env)
 end
 
 function algo.factor_out(u, env)
-  u = auto_simp(u, env)
+  u = S(u, env)
   if lib.kind(u, '*') then
     return lib.map(u, algo.factor_out, env)
   elseif lib.kind(u, '^') then
@@ -203,14 +205,14 @@ function algo.factor_out(u, env)
     for i = 2, lib.num_args(s) do
       c = algo.common_factor(c, lib.arg(s, i), env)
     end
-    return {'*', c, lib.map(s, function(a) return auto_simp({'/', a, c}, env) end)}
+    return {'*', c, lib.map(s, function(a) return S({'/', a, c}, env) end)}
   end
   return u
 end
 
 function algo.factor_out_term(u, t, env)
   if lib.kind(u, '+') then
-    return {'*', t, lib.map(u, function(a) return auto_simp({'/', a, t}, env) end)}
+    return {'*', t, lib.map(u, function(a) return S({'/', a, t}, env) end)}
   elseif lib.kind(u, '^') then
     return {'^', algo.factor_out_term(lib.arg(u, 1), t, env), lib.arg(u, 2)}
   end
@@ -262,18 +264,30 @@ function algo.expand_product(u, v)
   end
 end
 
-function algo.expand_power(u, n)
-  if lib.kind(u, '+') then
-    local f = lib.arg(u, 1)
-    local r = {'-', u, f}
-    local s = {'int', 0}
-    for k = 0, lib.safe_int(n) or 1 do
-      local c = {'/', calc.factorial(n), {'*', calc.factorial({'int', k}), {'!', {'-', n, {'int', k}}}}}
-      s = {'+', s, algo.expand_product({'*', c, {'^', f, {'-', n, {'int', k}}}}, algo.expand_power(r, {'int', k}))}
+function algo.expand_power(base, expo)
+  if lib.kind(expo, 'frac', 'real') then
+    local i = calc.floor(expo) -- floored integer
+    local f = calc.sum(calc.product(calc.NEG_ONE, i), expo) -- fraction/real part
+    local b = algo.expand(base)
+
+    -- Prevent multiplication with 1
+    if calc.is_zero_p(i) then
+      return {'^', b, f}
     end
+    return algo.expand_product({'^', b, f}, algo.expand_power(b, i))
+  elseif lib.kind(base, '+') then
+    local f = lib.arg(base, 1)
+    local r = {'-', base, f}
+    local s = {'int', 0}
+
+    for k = 0, lib.safe_int(expo) or 1 do
+      local c = {'/', calc.factorial(expo), {'*', calc.factorial({'int', k}), {'!', {'-', expo, {'int', k}}}}}
+      s = {'+', s, algo.expand_product({'*', c, {'^', f, {'-', expo, {'int', k}}}}, algo.expand_power(r, {'int', k}))}
+    end
+
     return s
   else
-    return {'^', u, n}
+    return {'^', base, expo}
   end
 end
 
@@ -282,25 +296,31 @@ end
 --         x (x + 1) => x ^ 2 + x
 --   (x + y) ^ 2     => x ^ 2 + 2 x y + y ^ 2
 function algo.expand(u)
+  for _ = 1, g.kill_iteration_limit do
+    local old_u = u
+
+    -- Expand outputs non-simplified expressions but expects simplified ones
+    u = S(algo.expand_single(u))
+    if lib.compare(u, old_u) then
+      return u
+    end
+  end
+  return g.SYM_KILL
+end
+
+function algo.expand_single(u)
   if lib.kind(u, '+') then
     local v = lib.arg(u, 1)
-    return {'+', algo.expand(v), algo.expand({'-', u, v})}
+    return {'+', algo.expand(v), algo.expand(S({'-', u, v}))}
   elseif lib.kind(u, '*') then
     local v = lib.arg(u, 1)
-    return algo.expand_product(algo.expand(v), algo.expand({'/', u, v}))
+    return algo.expand_product(algo.expand(v), algo.expand(S({'/', u, v})))
   elseif lib.kind(u, '^') then
     local base = lib.arg(u, 1)
     local expo = lib.arg(u, 2)
-    if lib.kind(expo, 'int', 'frac') and lib.safe_bool(calc.gteq(expo, {'int', 2})) then
-      if lib.kind(expo, 'int') then
-        return algo.expand_power(algo.expand(base), expo)
-      else
-        -- Split exponent into integer and fraction part
-        local i = calc.floor(expo) -- floored integer
-        local f = calc.sum(calc.product(calc.NEG_ONE, i), expo) -- fraction
-        local b = algo.expand(base)
-        return algo.expand_product({'^', b, f}, algo.expand_power(b, i))
-      end
+    if (lib.kind(expo, 'int') and lib.safe_bool(calc.gteq(expo, {'int', 2}))) or
+       (lib.kind(expo, 'frac', 'real') and  calc.sign(expo) > 0) then
+      return algo.expand_power(algo.expand(base), expo)
     end
   end
   return u
@@ -336,7 +356,7 @@ end
 function algo.derivative(u, x, env)
   assert(lib.kind(x, 'sym'))
 
-  u = auto_simp(u, env)
+  u = S(u, env)
 
   if lib.kind(u, 'sym') and lib.sym(u) == lib.sym(x) then
     return {'int', 1}
@@ -373,18 +393,18 @@ function algo.newtons_method(fx, x, xn, s, env)
 
   local output = require 'output'
 
-  local fd = eval(algo.derivative(fx, x), env)
+  local fd = E(algo.derivative(fx, x), env)
   print('  '..' fd='..output.print_alg(fd))
 
   xn = xn or {'int', 1}
   for i = 1, s do
-    local vx = eval.eval(algo.substitute_all(fx, x, xn))
-    local vd = eval.eval(algo.substitute_all(fd, x, xn))
+    local vx = E(algo.substitute_all(fx, x, xn))
+    local vd = E(algo.substitute_all(fd, x, xn))
     print('  '..i..' xn='..output.print_alg(xn))
     print('  '..i..' fx='..output.print_alg(vx))
     print('  '..i..' dx='..output.print_alg(vd))
 
-    local new_xn = eval.eval({'-', xn, {'/', vx, vd}})
+    local new_xn = E({'-', xn, {'/', vx, vd}})
     if lib.compare(xn, new_xn) then
       break
     end

@@ -1,5 +1,11 @@
 local global = {
-  kill_recursive_recall = true
+  -- Kill recursive calls with no change
+  kill_recursive_recall = true,
+
+  -- Limit for iterative algorithms
+  kill_iteration_limit = 1000000,
+
+  SYM_KILL = {'sym', 'KILL'}
 }
 
 function global.message(s)

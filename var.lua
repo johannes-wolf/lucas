@@ -23,7 +23,6 @@ vars.def('pi',        'Pi',                  nil,  '3.141592653589793238463')
 
 vars.def('nan',       'Not a number',        nil)
 vars.def('inf',       'Infinity',            nil)
-vars.def('ninf',      'Negative infinity',   nil)
 
 vars.def('true',      'Boolean true',        {'bool', true})
 vars.def('false',     'Boolean false',       {'bool', false})

@@ -12,6 +12,11 @@ function (a, _)
   return n and lib.arg(a[1], n)
 end)
 
+functions.def_lua('op_list', 1,
+function (a, _)
+  return a[1] and util.list.prepend('vec', lib.get_args(a[1]))
+end)
+
 functions.def_lua('num_op', 1,
 function (a, _)
   return {'int', lib.num_args(a[1]) or 0}
@@ -41,4 +46,13 @@ end)
 functions.def_lua('substitute', 'var',
 function (a, _)
   return algo.subs_sym(a[1], util.list.slice(a, 2))
+end)
+
+functions.def_lua('op_order', 'var',
+function (a, _)
+  local simplify = require 'simplify'
+  table.sort(a, function(x, y)
+    return simplify.order.front(x, y)
+  end)
+  return util.list.prepend('vec', a)
 end)

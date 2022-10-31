@@ -17,12 +17,20 @@ function d.dump(o)
 end
 
 function d.print(v, msg)
-  print((msg or 'dbg: ')..dbg.dump(v))
+  print((msg or 'dbg: ')..d.dump(v))
   return v
 end
 
 function d.format_trace(msg, ...)
   return 'TRACE '..msg..d.dump({...})
+end
+
+function d.call(msg, ...)
+  local out = require 'output'
+  local util = require 'util'
+  msg = msg..': '
+  msg = msg..table.concat(util.list.map({...}, out.print_alg), ', ')
+  print(msg)
 end
 
 return d

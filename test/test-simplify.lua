@@ -94,7 +94,7 @@ function tests.div_const()
   expect("1/2",     {'frac', 1, 2})
   expect("1:2/1:2", {'int',  1})
   expect("1/1:2",   {'int',  2})
-  expect("1.1/1",   {'real', 1.1/1})
+  expect("1.1/1",   {'real',  1.1/1})
   expect("1.1/1.1", {'int',  1})
   expect("1.5/1:2", {'int',  1.5/(1/2)})
 end
@@ -103,6 +103,46 @@ function tests.div_inf()
   --expect("inf/2",   {'sym', 'inf'})
   --expect("2/inf",   {'int', 0})
   --expect("inf/inf", {'sym', 'nan'})
+end
+
+function tests.op_order()
+  -- Op_Order constants by value
+  Expect('op_order(2, 1)',   '{1,2}')
+  Expect('op_order(5:2, 2)', '{2,5:2}')
+
+  -- Op_Order symbols by name
+  Expect('op_order(z,b,c)',    '{b,c,z}')
+  Expect('op_order(xa,x1,x2)', '{x1,x2,xa}')
+
+  -- Op_Order */+
+  Expect('op_order(2b, 3a)',       '{3a,2b}')
+  Expect('op_order(a+b, a+c)',     '{a+b,a+c}')
+  Expect('op_order(a+c+d, b+c+d)', '{a+c+d,b+c+d}')
+  Expect('op_order(c+d,b+c+d)',    '{c+d,b+c+d}')
+
+  -- Op_Order ^
+  Expect('op_order((1+x)^2,(1+x)^3,(1+y)^2)',
+                 '{(1+x)^2,(1+x)^3,(1+y)^2}')
+
+  -- Op_Order !
+  Expect('op_order(b!,a!)', '{a!,b!}')
+
+  -- Op_Order functions
+  Expect('op_order(f(x),g(x))', '{f(x),g(x)}')
+  Expect('op_order(f(x),f(y))', '{f(x),f(y)}')
+
+  -- Order constants first */+
+  Expect('op_list(a 4 b)', '{4,a,b}')
+  Expect('op_list(a+4+b)', '{4,a,b}')
+
+  -- Order units last
+  Expect('op_list(_m a 4 b)', '{4,a,b,_m}')
+  Expect('op_list(_m+a+4+b)', '{4,a,b,_m}')
+
+  -- Do not order templates
+  Expect('op_list(m_ a 4 b)', '{m_,4,a,b}')
+  Expect('op_list(a m_ 4 b)', '{4,a,m_,b}')
+  Expect('op_list(m_+a+4+b)', '{m_,4,a,b}')
 end
 
 return tests

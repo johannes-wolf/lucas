@@ -90,7 +90,7 @@ end
 
 function list.prepend(a, b)
   local c = {a}
-  for _, v in ipairs(b) do table.insert(c, v) end
+  for _, v in ipairs(b or {}) do table.insert(c, v) end
   return c
 end
 

@@ -4,8 +4,8 @@ function tests.pattern_var_order()
   Expect('x_',    'x_')
   Expect('y_+x_', 'y_+x_')
   Expect('y_ x_', 'y_ x_')
-  Expect('y_ 3 x_', '3 y_ x_')
-  Expect('y_ a x_ 3', '3 a y_ x_')
+  Expect('y_ 3 x_', 'y_ 3 x_')
+  Expect('y_ x_ 3', 'y_ x_ 3')
 end
 
 function tests.match_any()

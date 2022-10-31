@@ -32,7 +32,7 @@ end
 function tests.factor_out()
   Expect('factor_out((x^2+x y)^3)',       'x^3(x+y)^3')
   Expect('factor_out(a*(b+b x))',         'a b*(1+x)')
-  Expect('factor_out(a b x+a c x+b c x)', 'x*(a b+b c+a c)')
+  Expect('factor_out(a b x+a c x+b c x)', 'x*(a b+a c+b c)')
   Expect('factor_out(a/x+b/x)',           '1/x*(a+b)')
   Expect('factor_out((a+b)^2,a)',         'a^2*(1+b/a)^2')
 end
@@ -56,12 +56,14 @@ function tests.max()
 end
 
 function tests.expand()
-  Expect('expand((x+2)(x+3))', 'x^2+5x+6')
+  Expect('expand((x+2)(x+3))', '6+x^2+5x')
   Expect('expand(x^4*(x+2))',  'x^5+2x^4')
   Expect('expand(a*b*(c+d))',  'a b c+a b d')
   Expect('expand(a*b*(c+d)2)', '2a b c+2a b d')
-  Expect('expand((a+b)^2)',    'a^2+b^2+2a b')
-  Expect('expand((a-b)^2)',    'a^2+b^2-2a b')
+  Expect('expand((a+b)^2)',    'a^2+2a b+b^2')
+  Expect('expand((a-b)^2)',    'a^2-2a b+b^2')
+  Expect('expand((a+b)^3:2)',  'a*(a+b)^1:2+b*(a+b)^1:2')
+  Expect('expand((a+b)^5:2)',  'a^2*(a+b)^1:2+2 a b*(a+b)^1:2+b^2*(a+b)^1:2')
 end
 
 return tests

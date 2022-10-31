@@ -96,6 +96,7 @@ end
 
 
 local order = {}
+simplify.order = order
 
 function order.lexicographical(u, v)
   return u < v
@@ -150,7 +151,7 @@ end
 
 function order.front(u, v)
   -- Do not reorder placeholders
-  if lib.kind(u, 'tmp') then
+  if lib.kind(u, 'tmp') or lib.kind(v, 'tmp') then
     return false
   end
 
@@ -520,6 +521,7 @@ function simplify.power(expr)
   elseif lib.is_const(b) then
     return simplify.rne({'^', b, e})
   elseif lib.kind(b, '^') and lib.kind(e, 'int') then
+    -- (x^n)^e => x^(n e)
     local r, s = lib.arg(b, 1), lib.arg(b, 2)
     local p = simplify.product({'*', s, e})
     return simplify.power({'^', r, p})
@@ -610,13 +612,6 @@ end
 function simplify.unit(expr, env)
   trace_step('unit', expr)
 
-  local u = lib.safe_unit(expr)
-  if env then
-    local v = env:get_unit(u)
-    if v and v.value then
-      return simplify.expr(v.value, env)
-    end
-  end
   return expr
 end
 
@@ -772,7 +767,7 @@ end
 
 function simplify.expr(expr, env)
   trace_step('expr', expr)
-  assert(expr and env)
+  assert(expr)
 
   if lib.kind(expr, 'sym', 'tmp') then
     return expr
