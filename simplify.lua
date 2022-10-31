@@ -94,98 +94,114 @@ local function const(expr)
   end
 end
 
--- Return if u comes before v (u < v)
----@param u table
----@param v table
----@return boolean
-local function order_before(u, v)
-  local function find_neq(x, y)
-    for i = 1, math.min(lib.num_args(x), lib.num_args(y)) do
-      if not lib.compare(lib.arg(x, i), lib.arg(y, i)) then
-        return lib.arg(x, i), lib.arg(y, i), i
-      end
+
+local order = {}
+
+function order.lexicographical(u, v)
+  return u < v
+end
+
+function order.sum_prod(u, v)
+  local m, n = lib.num_args(u), lib.num_args(v)
+  if m ~= n then
+    return order.front(lib.arg(u, m), lib.arg(v, n))
+  end
+
+  for j = 0, math.min(m, n) - 2 do -- -2 or -1?
+    if not lib.compare(lib.arg(u, m - j), lib.arg(v, n - j)) then
+      return order.front(lib.arg(u, m - j), lib.arg(v, n - j))
     end
   end
 
-  local function find_neq_rev(x, y)
-    local nx = lib.num_args(x)
-    local ny = lib.num_args(y)
-    for i = 0, math.min(nx, ny) - 1 do
-      if not lib.compare(lib.arg(x, nx-i), lib.arg(y, ny-i)) then
-        return lib.arg(x, nx-i), lib.arg(y, ny-i), i
+  local k = math.min(m, n) - 1
+  if lib.compare(lib.arg(u, m - k), lib.arg(v, n - k)) then
+    return m < n
+  end
+
+  return false
+end
+
+function order.power(u, v)
+  if not lib.compare(base(u), base(v)) then
+    return order.front(base(u), base(v))
+  else
+    return order.front(exponent(u), exponent(v))
+  end
+end
+
+function order.fn(u, v)
+  if lib.fn(u) ~= lib.fn(v) then
+    return order.lexicographical(lib.fn(u), lib.fn(v))
+  else
+    local m, n = lib.num_args(u), lib.num_args(v)
+
+    for j = 1, math.min(m, n) do
+      if not lib.compare(lib.arg(u, j), lib.arg(u, j)) then
+        return order.front(lib.arg(u, j), lib.arg(u, j))
       end
     end
+
+    local k = math.min(m, n)
+    if lib.compare(lib.arg(u, k), lib.arg(u, k)) then
+      return m < m
+    end
+  end
+end
+
+function order.front(u, v)
+  -- Do not reorder placeholders
+  if lib.kind(u, 'tmp') then
+    return false
   end
 
-  if type(u) == 'string' and type(v) == 'string' then
-    return u < v
-  elseif type(u) == 'number' and type(v) == 'number' then
-    return u < v
-  end
-
+  -- Ordered operands
+  local uk, vk = lib.kind(u), lib.kind(v)
   if lib.is_const(u) and lib.is_const(v) then
     return lib.safe_bool(calc.lt(u, v))
-  elseif lib.kind(u, 'tmp') and not lib.kind(u, 'unit') then
-    return false -- Do not order placeholder alphabeticaly!
-  elseif lib.kind(u, 'sym') and lib.kind(v, 'sym') or
-         lib.kind(u, 'unit') and lib.kind(v, 'unit') then
-    return u[2] < v[2]
-  elseif (lib.kind(u, '+') and lib.kind(v, '+')) or
-         (lib.kind(u, '*') and lib.kind(v, '*')) then
-    local um, vm = find_neq_rev(u, v)
-    if um and vm then
-      return order_before(um, vm)
+  elseif uk == vk then
+    if uk == 'sym' then
+      return order.lexicographical(lib.sym(u), lib.sym(v))
+    elseif uk == 'unit' then
+      return order.lexicographical(lib.unit(u), lib.unit(v))
+    elseif uk == '*' or uk == '+' then
+      return order.sum_prod(u, v)
+    elseif uk == '^' then
+      return order.power(u, v)
+    elseif uk == '!' then
+      return order.front(lib.arg(u, 1), lib.arg(v, 1))
+    elseif uk == 'fn' then
+      return order.fn(u, v)
     end
-    return #u < #v
-  elseif lib.kind(u, '^') and lib.kind(v, '^') then
-    if not lib.compare(base(u), base(v)) then
-      return order_before(base(u), base(v))
-    end
-    --return order_before(exponent(u), exponent(v))
-    return not order_before(exponent(u), exponent(v)) -- FIXME: Order from high to low!
-  elseif lib.kind(u, '!') and lib.kind(v, '!') then
-    return order_before(u[2], v[2])
-  elseif (lib.kind(u, 'fn') and lib.kind(v, 'fn')) or
-         (lib.kind(u, 'vec') and lib.kind(v, 'vec')) then
-    if lib.fn(u) ~= lib.fn(v) then
-      return lib.fn(u) < lib.fn(v)
-    end
-
-    local um, vm = find_neq(u, v)
-    if um and vm then
-      return order_before(um, vm)
-    end
-    return #u < #v
-  elseif lib.is_const(u) and not lib.is_const(v) then
-    return true
-  elseif lib.kind(u, 'unit') and not lib.kind(v, 'unit') then
-    return false
-  elseif lib.kind(u, '*') and lib.kind(v, '^', '+', '!', 'fn', 'sym', 'unit', 'vec') then
-    return order_before(u, {'*', v})
-  elseif lib.kind(u, '^') and lib.kind(v, '+', '!', 'fn', 'sym', 'unit', 'vec') then
-    return order_before(u, {'^', v, {'int', 1}})
-  elseif lib.kind(u, '+') and lib.kind(v, '!', 'fn', 'sym', 'unit', 'vec') then
-    return order_before(u, {'+', v})
-  elseif lib.kind(u, '!') and lib.kind(v, 'fn', 'sym', 'unit', 'vec') then
-    if lib.compare(u[2], v) then
-      return false
-    else
-      return order_before(u, {'!', v})
-    end
-  elseif lib.kind(u, 'fn') and lib.kind(v, 'sym', 'unit', 'vec') then
-    if lib.fn(u) == v[2] then
-      return false
-    else
-      order_before(lib.fn(u), v[2])
-    end
-  elseif lib.kind(u, 'sym') and lib.kind(v, 'unit', 'vec') then
-    -- Order units last!
-    return true
-  elseif lib.kind(u, 'vec') and lib.kind(v, 'unit') then
-    return true
   else
-    return not order_before(v, u)
+    if lib.is_const(u) and not lib.is_const(v) then
+      return true
+    elseif uk == '*' and (vk == '^' or vk == '+' or vk == '!' or vk == 'fn' or vk == 'sym') then
+      return order.front(u, {'*', v})
+    elseif uk == '^' and (vk == '+' or vk == '!' or vk == 'fn' or vk == 'sym') then
+      return order.front(u, {'^', v, calc.ONE})
+    elseif uk == '+' and (vk == '!' or vk == 'fn' or vk == 'sym') then
+      return order.front(u, {'+', v})
+    elseif uk == '!' and (vk == 'fn' or vk == 'sym') then
+      if lib.compare(lib.arg(u, 1), v) then
+        return false
+      else
+        return order.front(u, {'!', v})
+      end
+    elseif uk == 'fn' and (vk == 'sym') then
+      if lib.fn(u) == lib.sym(v) then
+        return false
+      else
+        return order.lexicographical(lib.fn(u), lib.sym(v))
+      end
+    elseif uk == 'unit' then
+      return false
+    elseif vk == 'unit' then
+      return true
+    else
+      return not order.front(v, u)
+    end
   end
+  error('unreachable')
 end
 
 local function merge_operands(p, q, base_simp, ...)
@@ -335,7 +351,7 @@ function simplify.product_rec(l)
       else
         return {p}
       end
-    elseif order_before(b, a) then
+    elseif order.front(b, a) then
       return {b, a}
     else
       return l
@@ -439,7 +455,7 @@ function simplify.sum_rec(l)
       else
         return {p}
       end
-    elseif order_before(b, a) then
+    elseif order.front(b, a) then
       return {b, a}
     else
       return l
@@ -617,7 +633,7 @@ function simplify.nary_operator_rec(l, k, fn)
     local r = fn(a, b)
     if r then
       return {r}
-    elseif order_before(b, a) then
+    elseif order.front(b, a) then
       return {b, a}
     else
       return l
