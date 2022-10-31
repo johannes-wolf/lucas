@@ -2,7 +2,6 @@ local fn = require 'functions'
 local lib = require 'lib'
 local calc = require 'calc'
 local list = require 'fn.list'
-local dbg = require 'dbg'
 
 local matrix = {}
 
@@ -42,14 +41,14 @@ function matrix.get_row(l, n)
   return lib.arg(l, n)
 end
 
-function matrix.apply2(a, b, fn)
+function matrix.apply2(a, b, f)
   a = lib.expect_kind(a, 'vec')
   b = lib.expect_kind(b, 'vec')
   if lib.num_args(a) == lib.num_args(b) then
     if lib.num_args(lib.arg(a, 1)) == lib.num_args(lib.arg(b, 1)) then
       return lib.mapi(a, function(m, r)
         return lib.mapi(r, function(n, v)
-          return fn(v, lib.arg(lib.arg(b, m), n))
+          return f(v, lib.arg(lib.arg(b, m), n))
         end)
       end)
     end
@@ -57,10 +56,10 @@ function matrix.apply2(a, b, fn)
   error('Incompatible matrixes')
 end
 
-function matrix.map(a, fn)
+function matrix.map(a, f)
   return lib.mapi(a, function(m, r)
     return lib.mapi(r, function(n, v)
-      return fn(m, n, v)
+      return f(m, n, v)
     end)
   end)
 end
@@ -146,9 +145,10 @@ function (a, _)
   return matrix.sum(a[1], a[2])
 end)
 
-fn.def_lua('mat.smul', 2,
+fn.def_lua('mat.smul', {{name = 'matrix'},
+                        {name = 'scalar'}},
 function (a, _)
-  return matrix.mul_scalar(a[1], a[2])
+  return matrix.mul_scalar(a.matrix, a.scalar)
 end)
 
 return matrix

@@ -91,7 +91,7 @@ function calc.gcd(a, b)
   if a and b then
     return {'int', calc.gcd_i(a, b)}
   end
-  return 'undef'
+  return calc.NAN
 end
 
 function calc.negate_symbolic(n)
@@ -308,7 +308,7 @@ local function vminmax(v, fn)
     end
     return m
   end
-  return 'undef'
+  return calc.NAN
 end
 
 -- Find min value
@@ -546,7 +546,7 @@ function calc.sum(a, b)
     end
     return sum_reals(a, b)
   else
-    return 'undef'
+    return calc.NAN
   end
 end
 
@@ -583,7 +583,7 @@ function calc.product(a, b)
     end
     return mul_reals(a, b)
   else
-    return 'undef'
+    return calc.NAN
   end
 end
 
@@ -602,7 +602,7 @@ end
 ---@return table
 function calc.quotient(a, b)
   if calc.is_zero_p(b) then
-    return 'undef'
+    return calc.DIV_ZERO
   elseif calc.is_zero_p(a) then
     return {'int', 0}
   end
@@ -622,7 +622,7 @@ function calc.quotient(a, b)
     end
     return div_reals(a, b)
   else
-    return 'undef'
+    return calc.NAN
   end
 end
 
@@ -655,7 +655,7 @@ function calc.pow_ii(a, b)
     if b >= 1 then
       return {'int', 0}
     else
-      return 'undef'
+      return calc.NAN
     end
   end
 end
@@ -717,7 +717,7 @@ function calc.factorial(u)
     end
     return {'int', r}
   elseif lib.is_const(u) then
-    return 'undef'
+    return calc.NAN
   end
 
   return calc.factorial_symbolic(u)
@@ -736,7 +736,7 @@ function calc.sqrt(u, n, approx_p)
   end
 
   if not calc.is_natnum_p(n, false) then
-    return 'undef'
+    return calc.NAN
   end
 
   if lib.kind(u, 'frac') then

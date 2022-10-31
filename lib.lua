@@ -219,6 +219,28 @@ function base.mapi(u, fn, ...) -- Same as base.map, but passes index as first ar
   end
 end
 
+-- Inline map
+function base.transform(u, fn, ...)
+  if base.num_args(u) > 0 then
+    for i = base.arg_offset(u) + 1, #u do
+      u[i] = fn(u[i], ...)
+    end
+    return u
+  else
+    return u
+  end
+end
+function base.transformi(u, fn, ...)
+  if base.num_args(u) > 0 then
+    for i = base.arg_offset(u) + 1, #u do
+      u[i] = fn(i - base.arg_offset(u), u[i], ...)
+    end
+    return u
+  else
+    return u
+  end
+end
+
 -- Compare tables
 ---@param u Expression|nil
 ---@param v Expression|nil

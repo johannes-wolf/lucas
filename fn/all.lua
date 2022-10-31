@@ -13,3 +13,5 @@ require 'fn.matrix'
 
 require 'fn.math'
 require 'fn.poly'
+
+require 'fn.gauss_jordan'
