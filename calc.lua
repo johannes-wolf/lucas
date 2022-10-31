@@ -131,7 +131,7 @@ function calc.floor(n)
   elseif lib.kind(n, 'frac') then
     return {'int', math.floor(n[2] / n[3])}
   else
-    return lib.map(n, calc.ceil)
+    return lib.map(n, calc.floor)
   end
 end
 
@@ -551,7 +551,7 @@ function calc.sum(a, b)
 end
 
 function calc.difference(a, b)
-  return calc.sum(a, calc.negate(b))
+  return calc.sum(a, calc.product(calc.NEG_ONE, b))
 end
 
 local function mul_fractions(a, b)

@@ -251,34 +251,59 @@ function algo.free_of(u, v)
   end
 end
 
--- Expands products of sums
---   (x + 2) (x + 3) => x^2 + 5 x + 6
---         x (x + 1) => x^2 + x
-function algo.expand(u)
-  local k = lib.kind(u)
-  if k == '*' then
-    local function expand_rec(a, i)
-      local b = lib.arg(u, i)
-      if not b then return a end
-
-      if lib.kind(a, '+') or lib.kind(b, '+') then
-        local aa = lib.kind(a, '+') and lib.get_args(a) or { a }
-        local ba = lib.kind(b, '+') and lib.get_args(b) or { b }
-
-        local n = { '+' }
-        for x = 1, #aa do
-          for y = 1, #ba do
-            table.insert(n, { '*', aa[x], ba[y] })
-          end
-        end
-        return expand_rec(n, i + 1)
-      end
-      return expand_rec({'*', a, b}, i + 1)
-    end
-    return expand_rec(lib.arg(u, 1), 2)
+function algo.expand_product(u, v)
+  if lib.kind(u, '+') then
+    local a = lib.arg(u, 1)
+    return {'+', algo.expand_product(a, v), algo.expand_product({'-', u, a}, v)}
+  elseif lib.kind(v, '+') then
+    return algo.expand_product(v, u)
   else
-    return lib.map(u, algo.expand)
+    return {'*', u, v}
   end
+end
+
+function algo.expand_power(u, n)
+  if lib.kind(u, '+') then
+    local f = lib.arg(u, 1)
+    local r = {'-', u, f}
+    local s = {'int', 0}
+    for k = 0, lib.safe_int(n) or 1 do
+      local c = {'/', calc.factorial(n), {'*', calc.factorial({'int', k}), {'!', {'-', n, {'int', k}}}}}
+      s = {'+', s, algo.expand_product({'*', c, {'^', f, {'-', n, {'int', k}}}}, algo.expand_power(r, {'int', k}))}
+    end
+    return s
+  else
+    return {'^', u, n}
+  end
+end
+
+-- Expands products of sums
+--   (x + 2) (x + 3) => x ^ 2 + 5 x + 6
+--         x (x + 1) => x ^ 2 + x
+--   (x + y) ^ 2     => x ^ 2 + 2 x y + y ^ 2
+function algo.expand(u)
+  if lib.kind(u, '+') then
+    local v = lib.arg(u, 1)
+    return {'+', algo.expand(v), algo.expand({'-', u, v})}
+  elseif lib.kind(u, '*') then
+    local v = lib.arg(u, 1)
+    return algo.expand_product(algo.expand(v), algo.expand({'/', u, v}))
+  elseif lib.kind(u, '^') then
+    local base = lib.arg(u, 1)
+    local expo = lib.arg(u, 2)
+    if lib.kind(expo, 'int', 'frac') and lib.safe_bool(calc.gteq(expo, {'int', 2})) then
+      if lib.kind(expo, 'int') then
+        return algo.expand_power(algo.expand(base), expo)
+      else
+        -- Split exponent into integer and fraction part
+        local i = calc.floor(expo) -- floored integer
+        local f = calc.sum(calc.product(calc.NEG_ONE, i), expo) -- fraction
+        local b = algo.expand(base)
+        return algo.expand_product({'^', b, f}, algo.expand_power(b, i))
+      end
+    end
+  end
+  return u
 end
 
 -- Return expression u with all trigonometric functions

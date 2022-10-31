@@ -60,6 +60,8 @@ function tests.expand()
   Expect('expand(x^4*(x+2))',  'x^5+2x^4')
   Expect('expand(a*b*(c+d))',  'a b c+a b d')
   Expect('expand(a*b*(c+d)2)', '2a b c+2a b d')
+  Expect('expand((a+b)^2)',    'a^2+b^2+2a b')
+  Expect('expand((a-b)^2)',    'a^2+b^2-2a b')
 end
 
 return tests
