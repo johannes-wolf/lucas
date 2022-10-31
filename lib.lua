@@ -23,6 +23,7 @@ function base.safe_bool(val, def)
   return def
 end
 
+---@param  val any
 ---@return number|nil
 function base.safe_int(val)
   if base.kind(val, 'int') then return val[2] end

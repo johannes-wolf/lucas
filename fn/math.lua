@@ -119,7 +119,7 @@ end)
 -- cases
 --   cases([cond1, then1] ..., else)
 --
---   Then actions are lazy evaluated!
+--   Both conditions and actions are lazy evaluated.
 functions.def_lua('cases', 'var',
 function (a, env)
   local eval = require 'eval'

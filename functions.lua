@@ -154,13 +154,16 @@ functions.def_lua('sign',  1, function(u)
                       return {'int', calc.sign(u)}
                     end
 end)
-functions.def_lua('num',   1, function(u)
-                    u = u[1]
-                    if lib.is_const(u) then
-                      return {'int', calc.numerator(u)}
-                    end
+
+functions.def_lua('numerator', 1,
+function(u)
+  return calc.numerator(u[1])
 end)
-functions.def_lua('denom', 1, function(u) return {'int', calc.denominator(u[1])} end)
+
+functions.def_lua('denominator', 1,
+function(u)
+  return calc.denominator(u[1])
+end)
 
 -- Type checking functions
 local function isa_helper(args, k)

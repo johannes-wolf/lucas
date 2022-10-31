@@ -186,4 +186,5 @@ function poly.expand(u, v, x, t, env)
     return S(algo.expand({'+', {'*', t, poly.expand(q, v, x, t, env)}, r}), env)
   end
 end
+
 return poly

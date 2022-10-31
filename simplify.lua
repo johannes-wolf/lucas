@@ -366,8 +366,8 @@ function simplify.product(expr)
 
   if util.set.contains(expr, calc.NAN) then
     return calc.NAN
-  elseif util.set.contains(expr, {'int', 0}) then
-    return {'int', 0}
+  elseif util.set.contains(expr, calc.ZERO) then
+    return calc.ZERO
   elseif lib.num_args(expr) == 1 then
     return expr[2]
   else
