@@ -8,13 +8,13 @@ function()
 end)
 
 fn.def_lua('mem.read', 0,
-function()
+function(_, env)
   local eval = require 'eval'
   local input = require 'input'
 
   local ok, err = pcall(function()
       for line in io.lines('.lucas_memory') do
-        eval.eval(input.read_expression(line))
+        eval.eval(input.read_expression(line), env)
       end
   end)
 

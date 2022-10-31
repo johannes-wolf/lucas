@@ -42,7 +42,7 @@ function eval.store(expr, eval_rhs, env)
   elseif lib.kind(a, 'unit') then
     env:set_unit(lib.unit(a), b)
   else
-    return calc.NAN
+    g.error('store: Invalid pattern')
   end
 
   return expr

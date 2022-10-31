@@ -4,6 +4,7 @@ local dbg = require 'dbg'
 local base = {}
 
 ---@alias Expression table
+---@alias List Expression
 ---@alias Associativity
 ---| 'left'
 ---| 'right'
@@ -29,7 +30,7 @@ end
 
 ---@reutrn string|nil
 function base.safe_sym(val)
-  if base.kind(val, 'sym') then return base.sym(val) end
+  if base.kind(val, 'sym', 'tmp') then return base.sym(val) end
 end
 
 ---@reutrn string|nil
@@ -62,7 +63,7 @@ end
 
 -- Returns whether u is const, a symbol or a unit
 function base.is_atomic(u)
-  return base.is_const(u) or base.kind(u, 'sym', 'unit')
+  return base.is_const(u) or base.kind(u, 'sym', 'tmp', 'unit')
 end
 
 -- Returns whether u is a collection (vec, set, list, ...)
@@ -86,7 +87,7 @@ end
 
 -- Get (or compare) expression function name (if kind = 'sym')
 function base.sym(u, ...)
-  if not u or not base.kind(u, 'sym') then return nil end
+  if not u or not base.kind(u, 'sym', 'tmp') then return nil end
   if select('#', ...) > 0 then
     return util.set.contains({...}, u[2])
   end
@@ -135,7 +136,7 @@ end
 ---@param u Expression|nil  Kind
 ---@return number           Internal argument offest
 function base.arg_offset(u)
-  return (base.kind(u, 'fn', 'sym', 'unit') and 2) or 1
+  return (base.kind(u, 'fn', 'sym', 'tmp', 'unit') and 2) or 1
 end
 
 -- Get number of arguments
@@ -206,7 +207,8 @@ function base.compare(u, v)
     if base.is_const(a) and base.is_const(b) then
       local calc = require 'calc'
       return base.safe_bool(calc.eq(a, b))
-    elseif base.kind(a, 'sym') and base.kind(b, 'sym') then
+    elseif base.kind(a, 'sym') and base.kind(b, 'sym') or
+           base.kind(a, 'tmp') and base.kind(b, 'tmp') then
       return base.sym(a) == base.sym(b)
     elseif base.kind(a, 'unit') and base.kind(b, 'unit') then
       return base.unit(a) == base.unit(b)
@@ -285,6 +287,36 @@ function base.split_args_if(u, k, n)
   if base.kind(u, k) and base.num_args(u) == n then
     return table.unpack(u, base.arg_offset(u) + 1)
   end
+end
+
+-- Find arg for which fn returns true
+---@param l  Expression|nil
+---@param fn function
+---@return Expression[]|nil, integer|nil
+function base.find_arg(l, fn, ...)
+  for i = 1, base.num_args(l) do
+    if fn(base.arg(l, i), ...) then
+      return base.arg(l, i), i
+    end
+  end
+end
+
+function base.copy_args(a, b)
+  for i = 1, base.num_args(a) do
+    table.insert(b, base.arg(a, i))
+  end
+  return b
+end
+
+function base.make_list(...)
+  return {'vec', ...}
+end
+
+function base.sort_list(l, fn)
+  local new = base.get_args(l) or {}
+  table.sort(new, fn)
+  table.insert(new, 0, 'vec')
+  return new
 end
 
 return base

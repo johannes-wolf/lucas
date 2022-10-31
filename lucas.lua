@@ -42,6 +42,12 @@ g.message = function(m) return msg('MSG', m) end
 g.warn    = function(m) return msg('WRN', m) end
 g.error   = function(m) return msg('ERR', m) end
 
+pcall(function()
+  for line in io.lines('.lucas_init') do
+    eval.eval(input.read_expression(line), Env())
+  end
+end)
+
 local env = Env()
 local n = 1
 local ok, err = true, nil

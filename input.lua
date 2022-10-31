@@ -84,13 +84,19 @@ function input.read_expression(str)
   -- Parser for variables and functions
   parselets['id'] = {
     prefix = function(p, token)
+      local name = token[1]
       if p:match('s', '(') then
         p:consume()
         local args = p:parse_list({',', kind='s'}, {')', kind='s'})
-        return util.list.join({'fn', token[1]}, args)
+        return util.list.join({'fn', name}, args)
       end
 
-      return {'sym', token[1]}
+      -- Identifiers ending with _ are templates
+      if name:find('^.*_$') then
+        return {'tmp', name}
+      end
+
+      return {'sym', name}
     end
   }
 

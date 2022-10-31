@@ -23,9 +23,9 @@ Whats works:
 - Pattern matching
     
   Definition of function 'sign' with 3 different cases
-    sign(x) :: x < 0 := -1
-    sign(x) :: x > 0 := 1
-    sign(0) := 0
+    sign(x_ :: x_ < 0) := -1
+    sign(x_ :: x_ > 0) := 1
+    sign(0)            := 0
     
   Temporary overrides
     x+y | x=1

@@ -25,7 +25,7 @@ end
 --   x^2 => x
 --   x   => x
 local function base(u)
-  if lib.kind(u, 'vec', 'sym', 'unit', '*', '+', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'fn') then
     return u
   elseif lib.kind(u, '^') then
     return lib.arg(u, 1)
@@ -41,7 +41,7 @@ end
 --   x^2 => 2
 --   x   => 1
 local function exponent(u)
-  if lib.kind(u, 'vec', 'sym', 'unit', '*', '+', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'fn') then
     return {'int', 1}
   elseif lib.kind(u, '^') then
     return lib.arg(u, 2)
@@ -58,7 +58,7 @@ end
 --   2*y => *y
 --   x*y => x*y
 local function term(u)
-  if lib.kind(u, 'vec', 'sym', 'unit', '+', '^', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '+', '^', '!', 'fn') then
     -- Return the uession as binary product (* u)
     return {'*', u}
   elseif lib.kind(u, '*') and lib.is_const(lib.arg(u, 1)) then
@@ -80,7 +80,7 @@ end
 --   2*y => 2
 --   x*y => 1
 local function const(expr)
-  if lib.kind(expr, 'vec', 'sym', 'unit', '+', '^', '!', 'fn') then
+  if lib.kind(expr, 'vec', 'sym', 'tmp', 'unit', '+', '^', '!', 'fn') then
     return {'int', 1}
   elseif lib.kind(expr, '*') and lib.is_const(lib.arg(expr, 1)) then
     return lib.arg(expr, 1)
@@ -124,6 +124,8 @@ local function order_before(u, v)
 
   if lib.is_const(u) and lib.is_const(v) then
     return lib.safe_bool(calc.lt(u, v))
+  elseif lib.kind(u, 'tmp') and lib.kind(v, 'tmp') then
+    return false
   elseif lib.kind(u, 'sym') and lib.kind(v, 'sym') or
          lib.kind(u, 'unit') and lib.kind(v, 'unit') then
     return u[2] < v[2]
@@ -743,7 +745,7 @@ function simplify.expr(expr, env)
   trace_step('expr', expr)
   assert(expr and env)
 
-  if lib.kind(expr, 'sym') then
+  if lib.kind(expr, 'sym', 'tmp') then
     return expr
   elseif lib.kind(expr, 'bool', 'int', 'real') then
     return expr

@@ -27,13 +27,10 @@ local function match_rec(expr, parent, index, p, quote, vars)
   -- Evaluate boolean expression
   local function eval_bool(cnd)
     local eval = require 'eval'
-
-    local env = Env()
     for k, v in pairs(vars) do
-      env.vars[k] = { value = v.expr }
+      cnd = pattern.substitute_var(cnd, k, v.expr)
     end
-
-    return lib.safe_bool(eval.eval(cnd, env), false)
+    return lib.safe_bool(eval.eval(cnd, Env()), false)
   end
 
   if not quote then
@@ -50,7 +47,7 @@ local function match_rec(expr, parent, index, p, quote, vars)
       end
     end
 
-    if lib.kind(p, 'sym') then
+    if lib.kind(p, 'tmp') then
       local s = lib.sym(p)
       assert(s)
 
@@ -93,7 +90,7 @@ local function substitute_rec(expr, quote, vars)
       end
     end
 
-    if lib.kind(expr, 'sym') then
+    if lib.kind(expr, 'tmp') then
       local s = lib.sym(expr)
       if vars[s] then
         return util.table.clone(vars[s].expr)

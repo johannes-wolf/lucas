@@ -54,7 +54,7 @@ function output.print_alg(u)
       return format_frac(v)
     elseif k == 'bool' then
       return format_bool(v)
-    elseif k == 'sym' then
+    elseif k == 'sym' or k == 'tmp' then
       return format_sym(v)
     elseif k == 'unit' then
       return format_unit(v)
@@ -129,7 +129,7 @@ function output.print_sexp(u)
     return format_frac(u)
   elseif k == 'bool' then
     return format_bool(u)
-  elseif k == 'sym' then
+  elseif k == 'sym' or k == 'tmp' then
     return format_sym(u)
   elseif k == 'unit' then
     return format_unit(u)
