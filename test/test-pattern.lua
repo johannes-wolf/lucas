@@ -31,14 +31,14 @@ end
 
 function tests.match_nary_sum()
   Expect('dict.sort(match_vars(a+b,x_+y_))', '{{x_,a},{y_,b}}')
-  --Expect('dict.sort(match_vars(a+b+c,x_+y_))', '{{x_,a},{y_,b}}')
-  --Expect('dict.sort(match_vars(a+b+c+d,x_+y_))', '{{x_,a},{y_,b}}')
+  Expect('dict.sort(match_vars(a+b+c,x_+y_))', '{{x_,a},{y_,b+c}}')
+  Expect('dict.sort(match_vars(a+b+c+d,x_+y_))', '{{x_,a},{y_,b+c+d}}')
 end
 
 function tests.match_nary_product()
   Expect('dict.sort(match_vars(a b,x_ y_))', '{{x_,a},{y_,b}}')
-  --Expect('dict.sort(match_vars(a b c,x_ y_))', '{{x_,a},{y_,b}}')
-  --Expect('dict.sort(match_vars(a b c d,x_ y_))', '{{x_,a},{y_,b}}')
+  Expect('dict.sort(match_vars(a b c,x_ y_))', '{{x_,a},{y_,b c}}')
+  Expect('dict.sort(match_vars(a b c d,x_ y_))', '{{x_,a},{y_,b c d}}')
 end
 
 function tests.match_sum()

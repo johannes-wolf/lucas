@@ -12,7 +12,7 @@ function (a, _)
     return {'bool', pattern.match(a.expr, a.pattern)}
   end
   return {'bool', false}
-end, fn.attribs.plain)
+end)
 
 fn.def_lua('match_vars', {{name = 'expr'},
                           {name = 'pattern'}},
@@ -26,4 +26,4 @@ function (a, _)
     return v
   end
   return {'vec'}
-end, fn.attribs.plain)
+end)

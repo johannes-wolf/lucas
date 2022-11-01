@@ -1,6 +1,5 @@
 local lib = require 'lib'
 local util = require 'util'
-local functions = require 'functions'
 local Env = require 'env'
 local dbg = require 'dbg'
 
@@ -31,17 +30,17 @@ local function eval_cond_test(test, vars)
   return lib.safe_bool(eval.eval(test, Env()), false)
 end
 
-local function match_rec(expr, parent, index, p, quote, vars)
-  assert(expr and p and vars)
+local function match_rec(expr, p, quote, vars)
+  assert(vars)
 
   if not quote then
     if lib.kind(p, 'fn') then
       local f = lib.fn(p)
       if f == 'quote' then -- quote(sub-pattern)
-        return match_rec(expr, parent, index, lib.arg(p, 1), true, vars)
+        return match_rec(expr, lib.arg(p, 1), true, vars)
       elseif f == 'cond' then -- cond(sub-pattern, condition)
         local sub, cond = lib.arg(p, 1), lib.arg(p, 2)
-        if match_rec(expr, parent, index, sub, quote, vars) then
+        if match_rec(expr, sub, quote, vars) then
           return eval_cond_test(cond, vars)
         end
         return false
@@ -53,28 +52,47 @@ local function match_rec(expr, parent, index, p, quote, vars)
       assert(s)
 
       if vars[s] then
-        return match_rec(expr, parent, index, vars[s].expr, true, vars)
+        return match_rec(expr, vars[s].expr, true, vars)
       else
-        vars[s] = {expr = expr, pos = {parent = parent, index = index}}
+        vars[s] = {expr = expr}
         return true
       end
     end
   end
 
-  if not match_head(expr, p) then return false end
+  -- Test kind and non-argument fields
+  if not match_head(expr, p) then
+    return false
+  end
 
-  expr = lib.make_binary_operator(expr)
-  p = lib.make_binary_operator(p)
+  local expr_len, p_len = lib.num_args(expr), lib.num_args(p)
 
-  if lib.num_args(expr) ~= lib.num_args(p) then return false end
-
-  for i = 1, lib.num_args(p) do
-    if not match_rec(lib.arg(expr, i), expr, i, lib.arg(p, i), quote, vars) then
+  -- Match all arguments for functions and vectors
+  if lib.kind(expr, 'fn', 'vec') then
+    if expr_len ~= p_len then
       return false
     end
   end
 
-  return true
+  -- Test for n-ary operators
+  if expr_len < p_len then
+    return false
+  end
+
+  print('plen: '..p_len)
+  print(dbg.dump(p))
+  print('elen: '..expr_len)
+  print(dbg.dump(expr))
+  for i = 1, p_len - 1 do
+    print('matching '..lib.safe_sym(lib.arg(p, i)))
+    if not match_rec(lib.arg(expr, i), lib.arg(p, i), quote, vars) then
+      return false
+    end
+  end
+
+  local rest_args = util.list.prepend(lib.kind(expr), lib.get_args(expr, p_len))
+  print('matching p arg '..lib.safe_sym(lib.arg(p, p_len))..' against last '..lib.num_args(rest_args))
+  return match_rec(rest_args, lib.arg(p, p_len), quote, vars)
 end
 
 -- Replace symbols of vars in expr with their replacement expression
@@ -123,7 +141,7 @@ end
 ---@return     boolean, Variables
 function pattern.match(expr, p, vars)
   vars = vars or {}
-  return match_rec(expr, nil, 1, p, false, vars), vars
+  return match_rec(expr, p, false, vars), vars
 end
 
 -- Substitute set of variable vars
