@@ -57,6 +57,43 @@ local function make_lambda(fn)
   end
 end
 
+function algo.numerator(u, l)
+  if lib.kind(u, 'frac') then
+    return calc.I(u[2])
+  elseif lib.kind(u, '^') then
+    local e = lib.arg(u, 2)
+    if lib.safe_bool(calc.lt(e, calc.ZERO)) then
+      return calc.ONE
+    else
+      return u
+    end
+  elseif lib.kind(u, '*') then
+    local v = lib.arg(u, 1)
+    return {'*', algo.numerator(v, l), algo.numerator(S({'/', u, v}), l)}
+  else
+    return u
+  end
+end
+
+function algo.denominator(u, l)
+  if lib.kind(u, 'frac') then
+    return calc.I(u[3])
+  elseif lib.kind(u, '^') then
+    local e = lib.arg(u, 2)
+    if lib.safe_bool(calc.lt(e, calc.ZERO)) then
+      return {'^', u, calc.NEG_ONE}
+    else
+      return calc.ONE
+    end
+  elseif lib.kind(u, '*') then
+    local v = lib.arg(u, 1)
+    return {'*', algo.denominator(v,l), algo.denominator(S({'/', u, v}), l)}
+  else
+    return calc.ONE
+  end
+end
+
+
 -- Substitute all symbols in expr with x=y list rest entry
 function algo.subs_sym(expr, rest)
   local sp = {}
@@ -309,9 +346,9 @@ function algo.expand(u)
 end
 
 function algo.expand_single(u)
-  local denom = S(calc.denominator(u))
+  local denom = S(algo.denominator(u))
   if not lib.safe_bool(calc.eq(denom, calc.ONE)) then
-    return S({'/', algo.expand_single(S(calc.numerator(u))),
+    return S({'/', algo.expand_single(S(algo.numerator(u))),
                    algo.expand_single(denom)})
   elseif lib.kind(u, '+') then
     local v = lib.arg(u, 1)

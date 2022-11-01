@@ -125,35 +125,6 @@ function base.unit(u, ...)
   return u[2]
 end
 
--- Get if operator is varargs
----@param k Expression
----@return  boolean|string
-function base.is_vararg_operator(k)
-  return base.kind(k, '+', '*', 'and', 'or')
-end
-
--- Return binary operator if input operatr is an n-ary operator with more than
--- two operands.
----@param u     Expression      Input expression
----@param assoc Associativity?  Opertator associativity
----@return      Expression
-function base.make_binary_operator(u, assoc)
-  assoc = assoc or 'right'
-
-  if base.is_vararg_operator(u) then
-    if base.num_args(u) > 2 then
-      local k = base.kind(u)
-      if assoc == 'right' then
-        return {k, base.arg(u, 1), util.list.join({k}, base.get_args(u, 2))}
-      else
-        return {k, util.list.join({k}, base.get_args(u, 2)), base.arg(u, 1)}
-      end
-    end
-  end
-
-  return u
-end
-
 -- Get argument offset
 ---@param u Expression|nil  Kind
 ---@return number           Internal argument offest

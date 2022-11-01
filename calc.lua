@@ -59,7 +59,6 @@ end
 -- Returns true if n is zero
 -- Used by many functions: to prevent recursion, this must not call into eq!
 function calc.is_zero_p(n)
-  --n = calc.numerator(n) -- DANGEROUS: numerator can call simplify!
   if lib.is_const(n) then
     return safe_lua_number(n) == 0
   end
@@ -241,42 +240,6 @@ function calc.normalize_real(n)
     return calc.R(n)
   end
   return n
-end
-
-function calc.numerator(u, l)
-  if lib.kind(u, 'frac') then
-    return calc.I(u[2])
-  elseif lib.kind(u, '^') then
-    local e = lib.arg(u, 2)
-    if lib.safe_bool(calc.lt(e, calc.ZERO)) then
-      return calc.ONE
-    else
-      return u
-    end
-  elseif lib.kind(u, '*') then
-    local v = lib.arg(u, 1)
-    return {'*', calc.numerator(v, l), calc.numerator(S({'/', u, v}), l)}
-  else
-    return u
-  end
-end
-
-function calc.denominator(u, l)
-  if lib.kind(u, 'frac') then
-    return calc.I(u[3])
-  elseif lib.kind(u, '^') then
-    local e = lib.arg(u, 2)
-    if lib.safe_bool(calc.lt(e, calc.ZERO)) then
-      return {'^', u, calc.NEG_ONE}
-    else
-      return calc.ONE
-    end
-  elseif lib.kind(u, '*') then
-    local v = lib.arg(u, 1)
-    return {'*', calc.denominator(v,l), calc.denominator(S({'/', u, v}), l)}
-  else
-    return calc.ONE
-  end
 end
 
 function calc.sign_of_sym(factor, sym)

@@ -3,13 +3,13 @@ local util = require 'util'
 local calc = require 'calc'
 local algo = require 'algorithm'
 local g = require 'global'
-local dbg = require 'dbg'
+local env = require 'env'
 
 local poly = { gpe = {} }
 
 local function S(expr, env)
   local s = require 'simplify'
-  return s.expr(expr, env)
+  return s.expr(expr, env or Env())
 end
 
 local function exponent(u)
@@ -149,9 +149,7 @@ end
 
 -- Polynom division u/v with respect to x
 function poly.division(u, v, x, env)
-  local eval = require 'eval'
-
-  -- TODO: Test if u and v are polynoms
+  -- TODO: Test if u and v are polynoms in x
 
   local q = calc.ZERO
   local r = u
@@ -165,15 +163,18 @@ function poly.division(u, v, x, env)
     local lcr = poly.gpe.leading_coeff(r, x)
     assert(lcr, 'lcr is nil')
 
-    local s = eval.str('lcr/lcv', env, {lcr=lcr, lcv=lcv})
+    -- lcr / lcv
+    local s = S({'/', lcr, lcv}, env)
     assert(s, 's is nil')
 
-    q = eval.str('q+s x^(m-n)', env, {q=q, s=s, x=x, m=m, n=n})
+    -- q + s * x ^ (m - n)
+    q = S({'+', q, {'*', s, {'^', x, {'-', m, n}}}}, env)
     assert(q, 'q is nil')
 
-    local vars = {r=r, lcr=lcr, x=x, m=m, v=v, lcv=lcv, n=n, s=s}
-    -- TODO: store compiled functions or write as expressions
-    r = eval.str('expand((r-(lcr x^m)) - (v-(lcv x^n)) s x^(m-n))', env, vars)
+    -- expand((r - (lcr * x ^ m)) - (v - (lcv x ^ n)) s * x ^ (m - n))
+    r = S(algo.expand(
+            {'-', {'-', r, {'*', lcr, {'^', x, m}}},
+            {'*', {'-', v, {'*', lcv, {'^', x, n}}}, s, {'^', x, {'-', m, n}}}}), env)
     m = poly.gpe.degree(r, x)
     limit = limit + 1
     if limit > g.kill_iteration_limit then

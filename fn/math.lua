@@ -116,6 +116,16 @@ function (a, _)
   return algo.seq(a.fn, a.index, a.start, a.stop)
 end)
 
+functions.def_lua('numerator', 1,
+function(u)
+  return algo.numerator(u[1])
+end)
+
+functions.def_lua('denominator', 1,
+function(u)
+  return algo.denominator(u[1])
+end)
+
 -- cases
 --   cases([cond1, then1] ..., else)
 --

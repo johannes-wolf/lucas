@@ -155,16 +155,6 @@ functions.def_lua('sign',  1, function(u)
                     end
 end)
 
-functions.def_lua('numerator', 1,
-function(u)
-  return calc.numerator(u[1])
-end)
-
-functions.def_lua('denominator', 1,
-function(u)
-  return calc.denominator(u[1])
-end)
-
 -- Type checking functions
 local function isa_helper(args, k)
   if not args or #args == 0 then return {'bool', false} end
