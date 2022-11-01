@@ -585,6 +585,9 @@ function simplify.fn(u, env)
   trace_step('fn', u)
 
   local name = lib.safe_fn(u)
+  if name == 'plain' then
+    return u
+  end
 
   -- Do not simplify arguments if tagged as 'plain'
   if not functions.get_attrib(u, functions.attribs.plain, env) then

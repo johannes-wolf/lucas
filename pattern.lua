@@ -1,6 +1,6 @@
 local lib = require 'lib'
 local util = require 'util'
-local calc = require 'calc'
+local functions = require 'functions'
 local Env = require 'env'
 local dbg = require 'dbg'
 
@@ -21,17 +21,18 @@ local function match_head(left, right)
   return util.table.compare_slice(left, right, 1, lib.arg_offset(right))
 end
 
+local function eval_cond_test(test, vars)
+  local eval = require 'eval'
+
+  for k, v in pairs(vars) do
+    test = pattern.substitute_tmp(test, k, v.expr)
+  end
+
+  return lib.safe_bool(eval.eval(test, Env()), false)
+end
+
 local function match_rec(expr, parent, index, p, quote, vars)
   assert(expr and p and vars)
-
-  -- Evaluate boolean expression
-  local function eval_bool(cnd)
-    local eval = require 'eval'
-    for k, v in pairs(vars) do
-      cnd = pattern.substitute_tmp(cnd, k, v.expr)
-    end
-    return lib.safe_bool(eval.eval(cnd, Env()), false)
-  end
 
   if not quote then
     if lib.kind(p, 'fn') then
@@ -41,7 +42,7 @@ local function match_rec(expr, parent, index, p, quote, vars)
       elseif f == 'cond' then -- cond(sub-pattern, condition)
         local sub, cond = lib.arg(p, 1), lib.arg(p, 2)
         if match_rec(expr, parent, index, sub, quote, vars) then
-          return eval_bool(cond)
+          return eval_cond_test(cond, vars)
         end
         return false
       end

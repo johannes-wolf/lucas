@@ -59,6 +59,11 @@ function eval.fn(expr, env)
     return eval.fn_hold(expr)
   end
 
+  -- Hardcoded path for 'plain'
+  if lib.safe_fn(expr) == 'plain' then
+    return expr
+  end
+
   -- Evaluate arguments first
   if not functions.get_attrib(expr, functions.attribs.plain, env) then
     expr = lib.map(expr, eval.eval, env)
