@@ -309,7 +309,11 @@ function algo.expand(u)
 end
 
 function algo.expand_single(u)
-  if lib.kind(u, '+') then
+  local denom = S(calc.denominator(u))
+  if not lib.safe_bool(calc.eq(denom, calc.ONE)) then
+    return S({'/', algo.expand_single(S(calc.numerator(u))),
+                   algo.expand_single(denom)})
+  elseif lib.kind(u, '+') then
     local v = lib.arg(u, 1)
     return {'+', algo.expand(v), algo.expand(S({'-', u, v}))}
   elseif lib.kind(u, '*') then
@@ -318,10 +322,13 @@ function algo.expand_single(u)
   elseif lib.kind(u, '^') then
     local base = lib.arg(u, 1)
     local expo = lib.arg(u, 2)
+
     if (lib.kind(expo, 'int') and lib.safe_bool(calc.gteq(expo, {'int', 2}))) or
        (lib.kind(expo, 'frac', 'real') and  calc.sign(expo) > 0) then
       return algo.expand_power(algo.expand(base), expo)
     end
+  elseif lib.kind(u, 'fn') then
+    return lib.map(u, algo.expand_single)
   end
   return u
 end

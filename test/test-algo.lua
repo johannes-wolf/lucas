@@ -56,14 +56,17 @@ function tests.max()
 end
 
 function tests.expand()
-  Expect('expand((x+2)(x+3))', '6+x^2+5x')
-  Expect('expand(x^4*(x+2))',  'x^5+2x^4')
-  Expect('expand(a*b*(c+d))',  'a b c+a b d')
-  Expect('expand(a*b*(c+d)2)', '2a b c+2a b d')
-  Expect('expand((a+b)^2)',    'a^2+2a b+b^2')
-  Expect('expand((a-b)^2)',    'a^2-2a b+b^2')
-  Expect('expand((a+b)^3:2)',  'a*(a+b)^1:2+b*(a+b)^1:2')
-  Expect('expand((a+b)^5:2)',  'a^2*(a+b)^1:2+2 a b*(a+b)^1:2+b^2*(a+b)^1:2')
+  Expect('expand((x+2)(x+3))',   '6+x^2+5x')
+  Expect('expand(x^4*(x+2))',    'x^5+2x^4')
+  Expect('expand(a*b*(c+d))',    'a b c+a b d')
+  Expect('expand(a*b*(c+d)2)',   '2a b c+2a b d')
+  Expect('expand((a+b)^2)',      'a^2+2a b+b^2')
+  Expect('expand((a-b)^2)',      'a^2-2a b+b^2')
+  Expect('expand((a+b)^3:2)',    'a*(a+b)^1:2+b*(a+b)^1:2')
+  Expect('expand((a+b)^5:2)',    'a^2*(a+b)^1:2+2 a b*(a+b)^1:2+b^2*(a+b)^1:2')
+  Expect('expand(sin(a*(b+c)))', 'sin(a b+a c)')
+  Expect('expand(a/(b*(c+d)))',  'a/(b c+b d)')
+  Expect('expand(1/(x*(x+1)-x*(x+1)))', 'nan')
 end
 
 return tests
