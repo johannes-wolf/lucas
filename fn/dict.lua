@@ -84,10 +84,11 @@ end)
 fn.def_lua('dict.sort', {{name = 'dict'}},
 function (a, _)
   local simplify = require 'simplify'
-  local t = lib.get_args(a.dict)
+  local t = lib.get_args(a.dict) or {}
   table.sort(t, function(l, r)
     if lib.kind(l, 'vec') and lib.kind(r, 'vec') then
       l, r = lib.arg(l, 1), lib.arg(r, 1)
+      -- order.front does not touch templates
       if lib.kind(l, 'tmp') and lib.kind(r, 'tmp') then
         return lib.safe_sym(l) < lib.safe_sym(r)
       end
