@@ -2,6 +2,7 @@ local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
 local algo = require 'algorithm'
+local g = require 'global'
 local dbg = require 'dbg'
 
 local poly = { gpe = {} }
@@ -159,6 +160,7 @@ function poly.division(u, v, x, env)
   local lcv = poly.gpe.leading_coeff(v, x)
   assert(lcv, 'lcv is nil')
 
+  local limit = 1
   while lib.safe_bool(calc.gteq(m, n)) do
     local lcr = poly.gpe.leading_coeff(r, x)
     assert(lcr, 'lcr is nil')
@@ -170,8 +172,13 @@ function poly.division(u, v, x, env)
     assert(q, 'q is nil')
 
     local vars = {r=r, lcr=lcr, x=x, m=m, v=v, lcv=lcv, n=n, s=s}
+    -- TODO: store compiled functions or write as expressions
     r = eval.str('expand((r-(lcr x^m)) - (v-(lcv x^n)) s x^(m-n))', env, vars)
     m = poly.gpe.degree(r, x)
+    limit = limit + 1
+    if limit > g.kill_iteration_limit then
+      return g.KILL
+    end
   end
   return q, r
 end
