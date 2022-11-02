@@ -66,12 +66,11 @@ local function match_rec(expr, p, quote, vars)
   end
 
   local expr_len, p_len = lib.num_args(expr), lib.num_args(p)
+  local match_strict = not lib.kind(expr, '*', '+', 'and', 'or')
 
   -- Match all arguments for functions and vectors
-  if lib.kind(expr, 'fn', 'vec') then
-    if expr_len ~= p_len then
-      return false
-    end
+  if match_strict and expr_len ~= p_len then
+    return false
   end
 
   -- Test for n-ary operators
@@ -79,20 +78,22 @@ local function match_rec(expr, p, quote, vars)
     return false
   end
 
-  print('plen: '..p_len)
-  print(dbg.dump(p))
-  print('elen: '..expr_len)
-  print(dbg.dump(expr))
-  for i = 1, p_len - 1 do
-    print('matching '..lib.safe_sym(lib.arg(p, i)))
+  for i = 1, p_len - (match_strict and 0 or 1) do
     if not match_rec(lib.arg(expr, i), lib.arg(p, i), quote, vars) then
       return false
     end
   end
 
-  local rest_args = util.list.prepend(lib.kind(expr), lib.get_args(expr, p_len))
-  print('matching p arg '..lib.safe_sym(lib.arg(p, p_len))..' against last '..lib.num_args(rest_args))
-  return match_rec(rest_args, lib.arg(p, p_len), quote, vars)
+  if match_strict then
+    -- All args have been matchen non false
+    return true
+  end
+
+  -- Join rest args to a new argument with same operator
+  -- a b c d with pattern a b => a (b c d)
+  local rest_args = util.list.join(util.list.slice(expr, 1, lib.arg_offset(expr)),
+                                   lib.get_args(expr, p_len))
+  return lib.num_args(rest_args) <= 0 or match_rec(rest_args, lib.arg(p, p_len), quote, vars)
 end
 
 -- Replace symbols of vars in expr with their replacement expression
