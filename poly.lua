@@ -3,15 +3,19 @@ local util = require 'util'
 local calc = require 'calc'
 local algo = require 'algorithm'
 local g = require 'global'
-local env = require 'env'
+local Env = require 'env'
+local dbg = require 'dbg'
 
 local poly = { gpe = {} }
+
+---@alias Polynom Expression
 
 local function S(expr, env)
   local s = require 'simplify'
   return s.expr(expr, env or Env())
 end
 
+---@param u Expression|nil
 local function exponent(u)
   if lib.kind(u, '^') then
     return lib.arg(u, 2)
@@ -22,6 +26,7 @@ local function exponent(u)
   end
 end
 
+---@param u Expression|nil
 local function base(u)
   if lib.kind(u, '^') then
     return lib.arg(u, 1)
@@ -30,6 +35,9 @@ local function base(u)
   end
 end
 
+-- Iterate monomials of polynom u
+-- Single element monoms ar returned as single argument
+-- product.
 function poly.gpe.each_monom(u, fn)
   if lib.kind(u, '+') then
     for i = 1, lib.num_args(u) do
@@ -61,8 +69,16 @@ function poly.gpe.check(u, s)
 end
 
 -- Find the highest degree of symbol x
+--
+-- Example:
 --   x^2 + x => 2
+--
+---@param u Polynom
+---@param x Symbol
+---@return  Int
 function poly.gpe.degree(u, x)
+  assert(u and x, "missing arguments")
+
   if calc.is_zero_p(u) then
     return calc.NEG_INF
   end
@@ -79,9 +95,78 @@ function poly.gpe.degree(u, x)
   return r
 end
 
+-- Returns a list of all monomials of polynom u
+--
+-- Example:
+--   (x + y) ^ 3 => { x ^ 3, 3 x ^ 2 y, 3 x y ^ 2, y ^ 3 }
+--
+---@param u Polynom
+---@return  Expression[]
+function poly.gpe.monomial_list(u)
+  local l = {}
+
+  poly.gpe.each_monom(u, function(m)
+    table.insert(l, m)
+  end)
+
+  return l
+end
+
+-- Returns a list of all coefficients of x in u from degree 0 to hi.
+--
+-- Example:
+--   x ^ 3 + 3 x + 9 => { 9, 3, 0, 1 }
+--
+---@param u Polynom
+---@param x Symbol
+---@return  Expression[]
+function poly.gpe.coeff_list(u, x)
+  assert(u and x, "missing arguments")
+  local l = {}
+
+  -- Fill list with zeros up to n-1
+  local function add_for_degree(coeff, n)
+    while #l < n do
+      table.insert(l, calc.ZERO)
+    end
+    table.insert(l, coeff)
+  end
+
+  poly.gpe.each_monom(u, function(m)
+    if algo.free_of(m, x) then
+      table.insert(l, m)
+    else
+      local deg = 0
+      local coeff = {'*'}
+      for i = 1, lib.num_args(m) do
+        local part = lib.arg(m, i)
+        if not lib.compare(base(part), x) then
+          -- Got coefficient part of x
+          table.insert(coeff, part)
+        else
+          -- Got symbol x
+          deg = calc.to_number(exponent(part) or {'int', 1})
+        end
+      end
+      if lib.num_args(coeff) == 0 then
+        table.insert(coeff, {'int', 1})
+      end
+      add_for_degree(coeff, deg)
+    end
+  end)
+
+  return l
+end
+
 -- Return sum of all monom coefficients of x^j
+--
+-- Example:
 --   a x + b x + c => a + b
----@return table
+--
+---@param u Polynom
+---@param x Symbol
+---@param j Expression  Expontent of x
+---@return  Expression
 function poly.gpe.coeff(u, x, j)
   if lib.safe_bool(calc.gt(j, calc.ONE)) then
     x = {'^', x, j}

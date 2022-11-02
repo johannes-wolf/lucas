@@ -4,6 +4,7 @@ local dbg = require 'dbg'
 local base = {}
 
 ---@alias Expression table
+---@alias Symbol Expression
 ---@alias List Expression
 ---@alias Associativity
 ---| 'left'

@@ -41,3 +41,14 @@ functions.def_lua('poly.expand', {{name = 'u'},
 function (a, env)
   return poly.expand(a.u, a.v, a.x, a.t, env)
 end)
+
+functions.def_lua('poly.monomial_list', {{name = 'u'}},
+function (a, env)
+  return util.list.prepend('vec', poly.gpe.monomial_list(a.u, env))
+end)
+
+functions.def_lua('poly.coefficient_list', {{name = 'u'},
+                                            {name = 'x', match = 'is_sym'}},
+function (a, env)
+  return util.list.prepend('vec', poly.gpe.coeff_list(a.u, a.x, env))
+end)
