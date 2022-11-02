@@ -149,7 +149,7 @@ function poly.gpe.coeff_list(u, x)
         end
       end
       if lib.num_args(coeff) == 0 then
-        table.insert(coeff, {'int', 1})
+        coeff = {'int', 1}
       end
       add_for_degree(coeff, deg)
     end
@@ -278,6 +278,29 @@ function poly.expand(u, v, x, t, env)
     local q, r = poly.division(u, v, x, env)
     return S(algo.expand({'+', {'*', t, poly.expand(q, v, x, t, env)}, r}), env)
   end
+end
+
+function poly.horner_form(u, x)
+  local coeffs = poly.gpe.coeff_list(u, x)
+  if not coeffs then
+    return calc.ZERO
+  end
+
+  local function build_form(degree, high)
+    local idx = degree + 1
+    if degree == 0 then
+      if degree == high then
+        return coeffs[idx] -- Constant polynom
+      end
+      return {'+', coeffs[idx], build_form(degree + 1, high)}
+    elseif degree == high then
+      return {'*', coeffs[idx], x}
+    else
+      return {'*', x, {'+', coeffs[idx], build_form(degree + 1, high)}}
+    end
+  end
+
+  return build_form(0, #coeffs - 1)
 end
 
 return poly

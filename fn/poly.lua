@@ -52,3 +52,9 @@ functions.def_lua('poly.coefficient_list', {{name = 'u'},
 function (a, env)
   return util.list.prepend('vec', poly.gpe.coeff_list(a.u, a.x, env))
 end)
+
+functions.def_lua('poly.horner_form', {{name = 'u'},
+                                       {name = 'x', match = 'is_sym', opt = true}},
+function (a, env)
+  return poly.horner_form(a.u, a.x)
+end)
