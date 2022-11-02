@@ -9,9 +9,9 @@ fn.def_lua('match', {{name = 'expr'},
                      {name = 'pattern'}},
 function (a, _)
   if a.expr and a.pattern then
-    return {'bool', pattern.match(a.expr, a.pattern)}
+    return calc.make_bool(pattern.match(a.expr, a.pattern))
   end
-  return {'bool', false}
+  return calc.FALSE
 end)
 
 fn.def_lua('match_vars', {{name = 'expr'},

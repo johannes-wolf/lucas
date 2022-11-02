@@ -4,7 +4,7 @@ local Env = require 'env'
 fn.def_lua('mem.show', 0,
 function()
   print(Env.global:print())
-  return {'bool', true}
+  return {'int', 1}
 end)
 
 fn.def_lua('mem.read', 0,
@@ -22,7 +22,7 @@ function(_, env)
     print('error: '..tostring(err))
   end
 
-  return {'bool', ok}
+  return {'int', ok}
 end)
 
 fn.def_lua('mem.write', 0,
@@ -31,8 +31,8 @@ function()
   if f then
     f:write(Env.global:print())
     f:close()
-    return {'bool', true}
+    return {'int', 1}
   end
 
-  return {'bool', false}
+  return {'int', 0}
 end)

@@ -27,7 +27,8 @@ local function eval_cond_test(test, vars)
     test = pattern.substitute_tmp(test, k, v.expr)
   end
 
-  return lib.safe_bool(eval.eval(test, Env()), false)
+  local r = eval.eval(test, Env())
+  return lib.safe_bool(r, false)
 end
 
 local function match_rec(expr, p, quote, vars)

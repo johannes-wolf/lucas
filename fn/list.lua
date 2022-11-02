@@ -2,6 +2,7 @@ local fn = require 'functions'
 local op = require 'operator'
 local util = require 'util'
 local lib = require 'lib'
+local calc = require 'calc'
 
 -- List Operators
 op.def_fn_operator('in',           'in',           'infix', 7, 'list.in')
@@ -33,7 +34,7 @@ function list.get(l, path)
 end
 
 function list.contains(l, elem)
-  return {'bool', lib.find_arg(l, lib.compare, elem) ~= nil}
+  return calc.make_bool(lib.find_arg(l, lib.compare, elem) ~= nil)
 end
 
 function list.union(a, b)

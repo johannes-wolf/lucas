@@ -157,17 +157,16 @@ end)
 
 -- Type checking functions
 local function isa_helper(args, k)
-  if not args or #args == 0 then return {'bool', false} end
+  if not args or #args == 0 then return {'int', 0} end
   for _, v in ipairs(args) do
-    if not lib.kind(v, k) then return {'bool', false} end
+    if not lib.kind(v, k) then return {'int', 0} end
   end
-  return {'bool', true}
+  return {'int', 1}
 end
 
 functions.def_lua('is.function', 'var', function(u) return isa_helper(u, 'fn') end)
 functions.def_lua('is.unit',     'var', function(u) return isa_helper(u, 'unit') end)
 functions.def_lua('is.symbol',   'var', function(u) return isa_helper(u, 'sym') end)
-functions.def_lua('is.bool',     'var', function(u) return isa_helper(u, 'bool') end)
 functions.def_lua('is.integer',  'var', function(u) return isa_helper(u, 'int') end)
 functions.def_lua('is.fraction', 'var', function(u) return isa_helper(u, 'frac') end)
 functions.def_lua('is.real',     'var', function(u) return isa_helper(u, 'real') end)

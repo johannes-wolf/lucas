@@ -67,8 +67,6 @@ function tests.is_ratnum_p()
 end
 
 function tests.is_true_p()
-  test.FALSE(calc.is_true_p({'bool', false}))
-  test.TRUE(calc.is_true_p({'bool', true}))
   test.FALSE(calc.is_true_p({'int', 0}))
   test.TRUE(calc.is_true_p({'int', 1}))
   test.FALSE(calc.is_true_p({'real', 0}))

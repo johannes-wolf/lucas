@@ -59,7 +59,7 @@ end
 
 function algo.numerator(u, l)
   if lib.kind(u, 'frac') then
-    return calc.I(u[2])
+    return calc.make_int(u[2])
   elseif lib.kind(u, '^') then
     local e = lib.arg(u, 2)
     if lib.safe_bool(calc.lt(e, calc.ZERO)) then
@@ -77,7 +77,7 @@ end
 
 function algo.denominator(u, l)
   if lib.kind(u, 'frac') then
-    return calc.I(u[3])
+    return calc.make_int(u[3])
   elseif lib.kind(u, '^') then
     local e = lib.arg(u, 2)
     if lib.safe_bool(calc.lt(e, calc.ZERO)) then

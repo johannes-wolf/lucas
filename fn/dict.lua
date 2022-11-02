@@ -35,7 +35,7 @@ function (a, _)
   local item = lib.find_arg(a.dict, function(i)
     return lib.compare(lib.arg(i, 1), a.key)
   end)
-  return item and lib.arg(item, 2) or a.default or {'bool', false}
+  return item and lib.arg(item, 2) or (a.default or {'int', 0})
 end)
 
 fn.def_lua('dict.get_all', {{name = 'dict', match = is_dict_p},

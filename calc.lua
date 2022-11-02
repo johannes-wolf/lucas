@@ -1,41 +1,101 @@
 local fraction = require 'fraction'
-local dbg = require 'dbg'
 local lib = require 'lib'
-
----@alias Int  table
----@alias Frac table
----@alias Real table
-
-local real = {}
-
--- Make real
----@param n number
----@return  Real
-function real.make(n)
-  return {'real', n}
-end
+local dbg = require 'dbg'
 
 local calc = {}
+
 calc.NAN           = {'sym', 'nan'}
 calc.INF           = {'sym', 'inf'}
 calc.NEG_INF       = {'-', {'sym', 'inf'}}
 calc.ZERO          = {'int', 0}
 calc.ONE           = {'int', 1}
 calc.NEG_ONE       = {'int', -1}
-calc.TRUE          = {'bool', true}
-calc.FALSE         = {'bool', false}
+calc.TRUE          = {'int', 1}
+calc.FALSE         = {'int', 0}
 calc.ZERO_POW_ZERO = calc.ZERO       -- Result for 0^0
 calc.DIV_ZERO      = calc.NAN        -- Result for 0^(-n)
 
+---@alias Fn   Expression
+---@alias Int  Expression
+---@alias Frac Expression
+---@alias Real Expression
 
-function calc.I(n)         return {'int', math.floor(n)} end
-function calc.R(n)         return {'real', n} end
-function calc.F(n, d)      return fraction.make(n, d) end
-function calc.OP(sym, ...) return {sym, ...} end
+---@param expr  boolean|number|Expression
+---@return      Int
+function calc.make_bool(expr)
+  if type(expr) == 'boolean' then return expr and calc.TRUE or calc.FALSE end
+  if type(expr) == 'number' then return expr ~= 0 and calc.TRUE or calc.FALSE end
 
-local function S(expr)
-  local simplify = require 'simplify'
-  return simplify.expr(expr)
+  return calc.is_zero_p(expr) and calc.FALSE or calc.TRUE
+end
+
+-- Utility function for creating an integer
+---@param expr    number|Expression
+---@param strict  boolean?
+---@return        Int|nil
+function calc.make_int(expr, strict)
+  if type(expr) == 'number' then return {'int', math.floor(expr)} end
+
+  if not strict then
+    expr = calc.integer(expr)
+  end
+
+  return lib.kind(expr, 'int') and expr or nil
+end
+
+-- Utility for creating reals
+---@param expr number|Real
+---@return     Real|nil
+function calc.make_real(expr)
+  if type(expr) == 'number' then return {'real', expr} end
+
+  if lib.kind(expr, 'int') then
+    expr = {'real', expr[2]}
+  elseif lib.kind(expr, 'frac') then
+    expr = {'real', expr[2] / expr[3]}
+  end
+
+  return lib.kind(expr, 'real') and expr or nil
+end
+
+-- Utility for creating normalized fractions
+---@param denom  number|Int
+---@param num    number|Int
+---@return       Frac|nil
+function calc.make_fraction(num, denom)
+  assert(type(num) == type(denom))
+
+  if type(num) == 'number' then return fraction.normalize({'frac', math.floor(num), math.floor(denom)}) end
+
+  if lib.kind(num, 'int') and lib.kind(denom, 'int') then
+    return fraction.normalize({'frac', num[2], denom[2]})
+  end
+
+  return nil
+end
+
+-- Utility for converting expressions to lua numbers
+-- Note that fractions are returned as two values!
+---@param expr number|Int|Frac|Real
+---@return     number|nil, number|nil
+function calc.to_number(expr, ...)
+  if type(expr) == 'number' then return expr end
+  if select('#', ...) > 0 then
+    if not lib.kind(expr, ...) then return nil end
+  end
+  if lib.kind(expr, 'int', 'real') then
+    return expr[2]
+  elseif lib.kind(expr, 'frac') then
+    return expr[2], expr[3]
+  end
+end
+
+-- Same as to_number, but returns fractions as float
+---@param expr Expression
+---@return     number|nil
+function calc.to_number_f(expr, ...)
+  local num, denom = calc.to_number(expr, ...)
+  return denom and num/denom or num
 end
 
 -- Returns if u is a function with name fn
@@ -46,23 +106,10 @@ local function is_fn_p(u, fn)
   return lib.kind(u, 'fn') and lib.fn(u) == fn
 end
 
--- Returns constant as lua number for internal checks
-local function safe_lua_number(n)
-  if lib.kind(n, 'bool', 'int', 'real') then
-    return n[2]
-  elseif lib.kind(n, 'frac') then
-    return n[2]/n[3]
-  end
-  return nil
-end
-
 -- Returns true if n is zero
--- Used by many functions: to prevent recursion, this must not call into eq!
 function calc.is_zero_p(n)
-  if lib.is_const(n) then
-    return safe_lua_number(n) == 0
-  end
-  return false
+  local num, _ = calc.to_number(n)
+  return num and num == 0 or false
 end
 
 -- Returns true if n is positive or negative infinity.
@@ -85,7 +132,6 @@ function calc.is_negative_inf_p(n)
     local u = lib.split_args_if(n, '-', 1)
     return lib.safe_sym(u) == 'inf'
   end
-  return false
 end
 
 -- Returns true if n is NAN.
@@ -94,12 +140,15 @@ function calc.is_nan_p(n)
 end
 
 -- Returns true if n is a natural number. Returns true for 0 if with_zero is set.
+---@param n          number|Expression
+---@param with_zero  boolean
+---@return           boolean
 function calc.is_natnum_p(n, with_zero)
-  n = lib.safe_int(n)
+  local num, _ = calc.to_number(n, 'int')
   if with_zero then
-    return n and n >= 0
+    return (num and num >= 0) or false
   else
-    return n and n > 0
+    return (num and num > 0) or false
   end
 end
 
@@ -112,18 +161,8 @@ end
 ---@param a Expression
 ---@return  boolean
 function calc.is_true_p(a)
-  if lib.is_const(a) then
-    if lib.kind(a, 'bool') then
-      return lib.safe_bool(a)
-    else
-      return lib.safe_bool(calc.neq(a, calc.ZERO))
-    end
-  end
-  return false
-end
-
-local function is_int_i(n)
-  return n == math.floor(n)
+  local num, _ = calc.to_number(a)
+  return num and num ~= 0 or false
 end
 
 -- GCD
@@ -137,19 +176,17 @@ end
 -- GCD
 ---@param a Expression
 ---@param b Expression
----@return Expression
+---@return Expression|nil
 function calc.gcd(a, b)
-  if lib.is_const(a) and lib.is_const(b) then
-    if calc.is_zero_p(b) then
+  a = calc.to_number(a, 'int')
+  b = calc.to_number(b, 'int')
+  if a and b then
+    if b == 0 then
       return calc.DIV_ZERO
     end
 
-    local u, v = lib.safe_int(a), lib.safe_int(b)
-    if u and v then
-      return calc.I(calc.gcd_i(u, v))
-    end
+    return calc.make_int(calc.gcd_i(a, b))
   end
-  return {'gcd', a, b}
 end
 
 function calc.negate_special(n)
@@ -163,8 +200,6 @@ function calc.negate(n)
   local k = lib.kind(n)
   if k == 'int' then
     return {'int', -n[2]}
-  elseif k == 'bool' then
-    return {'bool', not n[2]}
   elseif k == 'frac' then
     return {k, -n[2], n[3]}
   elseif k == 'real' then
@@ -176,7 +211,7 @@ function calc.negate(n)
 end
 
 function calc.floor(n)
-  if lib.kind(n, 'bool', 'int') then
+  if lib.kind(n, 'int') then
     return n
   elseif lib.kind(n, 'real') then
     return {'int', math.floor(n[2])}
@@ -184,13 +219,11 @@ function calc.floor(n)
     return {'int', math.floor(n[2] / n[3])}
   elseif lib.is_container(n) then
     return lib.map(n, calc.floor)
-  else
-    return {'fn', 'floor', n}
   end
 end
 
 function calc.ceil(n)
-  if lib.kind(n, 'bool', 'int') then
+  if lib.kind(n, 'int') then
     return n
   elseif lib.kind(n, 'real') then
     return {'int', math.ceil(n[2])}
@@ -198,30 +231,25 @@ function calc.ceil(n)
     return {'int', math.ceil(n[2] / n[3])}
   elseif lib.is_container(n) then
     return lib.map(n, calc.floor)
-  else
-    return {'fn', 'ceil', n}
   end
 end
 
+-- Convert expression to integer
+---@param n Expression
+---@return  Int
 function calc.integer(n)
   return calc.floor(n)
 end
 
----@return table
+-- Conver expression to real
+---@param n Expression
+---@return  Real|nil
 function calc.real(n)
-  local k = lib.kind(n)
-  if k == 'int' then
-    return calc.R(n[2])
-  elseif k == 'bool' then
-    return calc.R(n[2])
-  elseif k == 'frac' then
-    return calc.real(calc.quotient(real.make(n[2]), real.make(n[3])))
-  elseif k == 'real' then
-    return n
-  elseif lib.is_container(n) then
+  if lib.kind(n, 'vec') then
     return lib.map(n, calc.real)
+  else
+    return calc.make_real(n)
   end
-  return {'fn', 'real', n}
 end
 
 function calc.normalize_fraction(n)
@@ -233,11 +261,10 @@ end
 
 function calc.normalize_real(n)
   if lib.kind(n, 'real') then
-    n = n[2]
-    if is_int_i(n) then
-      return calc.I(n)
+    local v = n[2]
+    if v == math.floor(v) then
+      return calc.make_int(v)
     end
-    return calc.R(n)
   end
   return n
 end
@@ -262,8 +289,6 @@ function calc.sign(n)
       return int_sign(n[2])
     elseif lib.kind(n, 'frac', 'real') then
       return int_sign(n[2])
-    elseif lib.kind(n, 'bool') then
-      return (n[2] > 0 and 1) or 0
     else
       error('not implemented')
     end
@@ -274,20 +299,27 @@ function calc.sign(n)
   return 1 -- FIXME: ???
 end
 
+-- Returns both input fractions as unnormalized fractions with same denominator
+---@param a Frac
+---@param b Frac
+---@return  Frac, Frac
 local function make_compat_fractions(a, b)
+  assert(lib.kind(a, 'frac') and lib.kind(b, 'frac'))
   if a[3] == b[3] then
     return a, b
   end
+
   local denom = a[3] * b[3]
   return {'frac', a[2] * b[3], denom},
          {'frac', b[2] * a[3], denom}
 end
 
+-- Return an unnormalize fraction of integer a or return input
+---@param a Expression
+---@return  Frac|Expression
 local function int_to_fraction(a)
   if lib.kind(a, 'int') then
     return {'frac', a[2], 1}
-  elseif lib.kind(a, 'bool') then
-    return {'frac', (a and 1) or 0, 1}
   else
     return a
   end
@@ -353,13 +385,13 @@ local function eq_vector(a, b)
   end
   for i = 1, math.max(lib.num_args(a), lib.num_args(b)) do
     local r = calc.eq(lib.arg(a, i), lib.arg(b, i))
-    if lib.kind(r, 'bool') and not lib.safe_bool(r) then
+    if r and not lib.safe_bool(r) then
       return calc.FALSE
-    else
-      return { '=', a, b }
+    elseif not r then
+      return nil
     end
-    return calc.TRUE
   end
+  return calc.TRUE
 end
 
 function calc.eq(a, b)
@@ -369,14 +401,14 @@ function calc.eq(a, b)
 
     if lib.kind(u, 'frac') and
        lib.kind(v, 'frac') then
-      return {'bool', u[2] == v[2] and u[3] == v[3]}
+      return calc.make_bool(u[2] == v[2] and u[3] == v[3])
     elseif lib.kind(u, 'frac', 'real') and
            lib.kind(v, 'frac', 'real') then
       u = calc.real(u)
       v = calc.real(v)
-      return {'bool', u[2] == v[2]}
+      return calc.make_bool(u[2] == v[2])
     elseif lib.is_collection(u) or
-          lib.is_collection(v) then
+           lib.is_collection(v) then
       return eq_vector(u, v)
     end
   end
@@ -384,16 +416,14 @@ function calc.eq(a, b)
   if lib.compare(a, b) then
     return calc.TRUE
   end
-  return { '=', a, b }
 end
 
 
 function calc.neq(a, b)
   local eq = calc.eq(a, b)
   if lib.kind(eq) ~= '=' then
-    return {'bool', not lib.safe_bool(eq)}
+    return calc.make_bool(not lib.safe_bool(eq))
   end
-  return {'!=', a, b}
 end
 
 local function lt_inf(a, b)
@@ -426,17 +456,16 @@ function calc.lt(a, b)
   if lib.kind(u, 'frac') and
      lib.kind(v, 'frac') then
     u, v = make_compat_fractions(u, v)
-    return {'bool', u[2] < v[2]}
+    return calc.make_bool(u[2] < v[2])
   elseif lib.kind(u, 'frac', 'real') and
          lib.kind(v, 'frac', 'real') then
     u = calc.real(u)
     v = calc.real(v)
-    return {'bool', u[2] < v[2]}
+    return calc.make_bool(u[2] < v[2])
   end
   if lib.compare(a, b) then
     return calc.FALSE
   end
-  return {'<', a, b}
 end
 
 function calc.lteq(a, b)
@@ -450,7 +479,6 @@ function calc.lteq(a, b)
   if lib.kind(lt) ~= '<' then
     return lt
   end
-  return {'<=', a, b}
 end
 
 local function gt_inf(a, b)
@@ -483,17 +511,16 @@ function calc.gt(a, b)
   if lib.kind(a, 'frac') and
      lib.kind(b, 'frac') then
     u, v = make_compat_fractions(u, v)
-    return {'bool', u[2] > v[2]}
+    return calc.make_bool(u[2] > v[2])
   elseif lib.kind(u, 'frac', 'real') and
          lib.kind(v, 'frac', 'real') then
     u = calc.real(u)
     v = calc.real(v)
-    return {'bool', u[2] > v[2]}
+    return calc.make_bool(u[2] > v[2])
   end
   if lib.compare(a, b) then
     return calc.FALSE
   end
-  return {'>', a, b}
 end
 
 function calc.gteq(a, b)
@@ -507,7 +534,6 @@ function calc.gteq(a, b)
   if lib.kind(gt) ~= '>' then
     return gt
   end
-  return {'>=', a, b}
 end
 
 local function sum_fractions(a, b)
@@ -520,7 +546,7 @@ local function sum_fractions(a, b)
 end
 
 local function sum_reals(a, b)
-  return real.make(a[2] + b[2])
+  return calc.make_real(a[2] + b[2])
 end
 
 function calc.sum(a, b)
@@ -548,8 +574,6 @@ function calc.sum(a, b)
       return calc.NAN
     end
   end
-
-  return {'+', a, b}
 end
 
 function calc.difference(a, b)
@@ -557,12 +581,12 @@ function calc.difference(a, b)
 end
 
 local function mul_fractions(a, b)
-  return fraction.make(a[2] * b[2],
-                       a[3] * b[3])
+  return calc.make_fraction(a[2] * b[2],
+                            a[3] * b[3])
 end
 
 local function mul_reals(a, b)
-  return real.make(a[2] * b[2])
+  return calc.make_real(a[2] * b[2])
 end
 
 function calc.product(a, b)
@@ -591,8 +615,6 @@ function calc.product(a, b)
       return calc.NEG_INF
     end
   end
-
-  return {'*', a, b}
 end
 
 local function div_fractions(a, b)
@@ -604,7 +626,7 @@ local function div_fractions(a, b)
 end
 
 local function div_reals(a, b)
-  return real.make(a[2] / b[2])
+  return calc.make_real(a[2] / b[2])
 end
 
 ---@return table
@@ -677,7 +699,7 @@ function calc.pow_ii(a, b)
 end
 
 function calc.pow_ff(a, b)
-  return calc.R(a ^ b)
+  return calc.make_real(a ^ b)
 end
 
 function calc.pow(a, b)
@@ -712,7 +734,6 @@ function calc.pow(a, b)
       return calc.pow_ff(a[2], b[2])
     end
   end
-  return {'^', a, b}
 end
 
 function calc.factorial(u)
@@ -730,19 +751,18 @@ function calc.factorial(u)
   elseif calc.is_inf_p(u, -1) then
     return calc.NEG_INF
   end
-  return {'!', u}
 end
 
 local function sqrt_ii(n, m)
   n = n ^ (1/m)
-  if is_int_i(n) then
+  if n == math.floor(n) then
     return n
   end
 end
 
 function calc.sqrt(u, n, approx_p)
   if not n then
-    n = calc.I(2)
+    n = {'int', 2}
   end
 
   if calc.is_inf_p(u, 1) then
@@ -770,18 +790,12 @@ function calc.sqrt(u, n, approx_p)
       return {'int', p}
     end
   end
-
-  if n ~= 2 then
-    return {'fn', 'sqrt', u, {'int', n}}
-  end
-  return {'fn', 'sqrt', u}
 end
 
 function calc.ln(x)
   if lib.kind(x, 'int', 'frac', 'float') then
     return {'real', math.log(calc.real(x)[2])}
   end
-  return {'fn', 'ln', x}
 end
 
 function calc.log(x, b)
@@ -792,10 +806,8 @@ function calc.log(x, b)
   end
 
   if lib.kind(x, 'int', 'frac', 'float') then
-    return {'real', math.log(calc.real(x)[2], calc.real(b)[2])}
+    return calc.make_real(math.log(calc.real(x)[2], calc.real(b)[2]))
   end
-
-  return {'fn', 'log', x, b}
 end
 
 function calc.exp(x, approx_p)
@@ -806,9 +818,8 @@ function calc.exp(x, approx_p)
   end
 
   if approx_p then
-    return {'real', math.exp(calc.real(x)[2])}
+    return calc.make_real(math.exp(calc.real(x)[2]))
   end
-  return {'fn', 'exp', x}
 end
 
 function calc.abs(u)
@@ -825,11 +836,9 @@ end
 
 function calc.bool(a)
   if lib.is_const(a) then
-    return {'bool', calc.is_true_p(a)}
+    return calc.make_bool(calc.is_true_p(a))
   elseif calc.is_inf_p(a, 0) then
     return calc.INF
-  else
-    return {'fn', 'bool', a}
   end
 end
 
@@ -843,7 +852,6 @@ function calc.land(a, b)
       return a
     end
   end
-  return {'and', a, b}
 end
 
 function calc.lor(a, b)
@@ -854,18 +862,16 @@ function calc.lor(a, b)
   elseif lib.is_const(a) and lib.is_const(b) then
     return b
   end
-  return {'or', a, b}
 end
 
 -- Logical not
 function calc.lnot(a)
   if lib.is_const(a) then
-    return {'bool', not calc.is_true_p(a)}
+    return calc.make_bool(not calc.is_true_p(a))
   end
   if is_fn_p(a, 'not') then
     return lib.arg(a, 1)
   end
-  return {'not', a}
 end
 
 return calc

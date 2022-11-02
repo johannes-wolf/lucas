@@ -9,17 +9,23 @@ local base = {}
 ---| 'left'
 ---| 'right'
 ---@alias Kind
----| 'bool'
 ---| 'int'
 ---| 'frac'
 ---| 'real'
+---| 'tmp'
 ---| 'sym'
 ---| 'unit'
 ---| 'fn'
 
 ---@reutrn boolean|nil
 function base.safe_bool(val, def)
-  if base.kind(val, 'bool') then return val[2] end
+  if base.kind(val, 'int') then
+    if type(val[2]) == 'boolean' then
+      return val[2]
+    else
+      return val[2] ~= 0
+    end
+  end
   return def
 end
 
@@ -80,7 +86,7 @@ end
 -- Returns whether u is const
 ---@param u Expression|nil
 function base.is_const(u)
-  return base.kind(u, 'int', 'real', 'frac', 'bool')
+  return base.kind(u, 'int', 'real', 'frac')
 end
 
 -- Returns whether u is const, a symbol or a unit
@@ -137,7 +143,7 @@ end
 ---@return number           Number of arguments
 function base.num_args(u)
   if not u then return 0 end
-  if base.kind(u, 'int', 'frac', 'real', 'bool', 'unit') then return 0 end
+  if base.kind(u, 'int', 'frac', 'real', 'unit') then return 0 end
   return u and #u - base.arg_offset(u) or 0
 end
 
@@ -222,8 +228,10 @@ function base.compare(u, v)
     if base.is_const(a) and base.is_const(b) then
       local calc = require 'calc'
       return base.safe_bool(calc.eq(a, b))
-    elseif base.kind(a, 'sym') and base.kind(b, 'sym') or
-           base.kind(a, 'tmp') and base.kind(b, 'tmp') then
+    elseif base.kind(a) ~= base.kind(b) then
+      return false
+    elseif (base.kind(a, 'sym') and base.kind(b, 'sym')) or
+           (base.kind(a, 'tmp') and base.kind(b, 'tmp')) then
       return base.sym(a) == base.sym(b)
     elseif base.kind(a, 'unit') and base.kind(b, 'unit') then
       return base.unit(a) == base.unit(b)
@@ -237,7 +245,7 @@ function base.compare(u, v)
         return true
       end
       return false
-    elseif base.kind(a) == base.kind(b) and base.num_args(a) == base.num_args(b) then
+    elseif base.num_args(a) == base.num_args(b) then
       for i = 1, base.num_args(a) do
         if not cmp(base.arg(a, i), base.arg(b, i)) then
           return false

@@ -16,7 +16,7 @@ local simplify = {}
 
 local function eq_const(u, n)
   if lib.is_const(u) then
-    return lib.safe_bool(calc.eq(u, {'int', n}))
+    return lib.safe_bool(calc.eq(u, calc.make_int(n)))
   end
   return false
 end
@@ -172,6 +172,8 @@ function order.front(u, v)
       return order.front(lib.arg(u, 1), lib.arg(v, 1))
     elseif uk == 'fn' then
       return order.fn(u, v)
+    else
+      return false
     end
   else
     if lib.is_const(u) and not lib.is_const(v) then
@@ -202,7 +204,7 @@ function order.front(u, v)
       return not order.front(v, u)
     end
   end
-  error('unreachable')
+  error('unreachable: '..dbg.dump({u, v}))
 end
 
 local function merge_operands(p, q, base_simp, ...)
@@ -570,7 +572,7 @@ function simplify.factorial(u)
   if lib.kind(u, 'vec') then
     return lib.map(u, calc.factorial)
   end
-  return calc.factorial(lib.arg(u, 1))
+  return calc.factorial(lib.arg(u, 1)) or u
 end
 
 local allowed_fn = {
@@ -701,21 +703,25 @@ function simplify.relation(u, env)
   end
 
   u = lib.map(u, simplify.expr, env)
-  if lib.kind(u, '<') then
-    return calc.lt(a, b)
-  elseif lib.kind(u, '<=') then
-    return calc.lteq(a, b)
-  elseif lib.kind(u, '>') then
-    return calc.gt(a, b)
-  elseif lib.kind(u, '>=') then
-    return calc.gteq(a, b)
-  elseif lib.kind(u, '=') then
-    return calc.eq(a, b)
-  elseif lib.kind(u, '!=') then
-    return calc.neq(a, b)
-  else
-    error('unimplemented')
-  end
+  a, b = lib.arg(u, 1), lib.arg(u, 2)
+
+  return (function()
+    if lib.kind(u, '<') then
+      return calc.lt(a, b)
+    elseif lib.kind(u, '<=') then
+      return calc.lteq(a, b)
+    elseif lib.kind(u, '>') then
+      return calc.gt(a, b)
+    elseif lib.kind(u, '>=') then
+      return calc.gteq(a, b)
+    elseif lib.kind(u, '=') then
+      return calc.eq(a, b)
+    elseif lib.kind(u, '!=') then
+      return calc.neq(a, b)
+    else
+      error('unimplemented')
+    end
+  end)() or u
 end
 
 function simplify.with_assignment(u, env)
@@ -774,7 +780,7 @@ function simplify.expr(expr, env)
 
   if lib.kind(expr, 'sym', 'tmp') then
     return expr
-  elseif lib.kind(expr, 'bool', 'int', 'real') then
+  elseif lib.kind(expr, 'int', 'real') then
     return expr
   elseif lib.kind(expr, 'unit') then
     return simplify.unit(expr, env)
@@ -786,6 +792,8 @@ function simplify.expr(expr, env)
     return simplify.with(expr, env)
   elseif lib.kind(expr, 'fn') then
     return simplify.fn(expr, env)
+  elseif lib.kind(expr, ':=') then
+    return expr
   else
     local k = lib.kind(expr)
 
