@@ -461,8 +461,10 @@ function algo.derivative(u, x, env)
     local v = lib.arg(u, 1)
     local w = {'/', u, v}
     return {'+', {'*', algo.derivative(v, x, env), w}, {'*', v, algo.derivative(w, x, env)}}
+  elseif lib.kind(u, 'fn') and lib.fn(u, 'exp') then
+    return {'*', u, algo.derivative(lib.arg(u, 1), x, env)}
   elseif lib.kind(u, 'fn') and lib.fn(u, 'sin') then
-    local v =lib.arg(u, 1)
+    local v = lib.arg(u, 1)
     return {'*', {'fn', 'cos', v}, algo.derivative(v, x, env)}
   elseif algo.free_of(u, x) then
     return {'int', 0}

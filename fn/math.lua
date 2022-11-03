@@ -68,7 +68,7 @@ function (a, _)
 end)
 
 functions.def_lua('exp', 1,
-function (a, _)
+function (a, env)
   return calc.exp(a[1], env.approx)
 end)
 
