@@ -272,9 +272,9 @@ function algo.complete_sub_expr(u)
 end
 
 -- Returns if expression u is free of v
---@param u table  Expression to search in
---@param v table  Expression to check against
---@return boolean
+---@param u table  Expression to search in
+---@param v table  Expression to check against
+---@return boolean
 function algo.free_of(u, v)
   if u == v or lib.compare(u, v) then
     return false
@@ -288,6 +288,51 @@ function algo.free_of(u, v)
     end
     return true
   end
+end
+
+-- Returns a linears expression m*x+n parts as list or nil
+---@param u Expression
+---@param x Symbol
+---@return  Expression[]|nil
+function algo.linear_form(u, x)
+  if lib.compare(u, x) then
+    return {calc.ONE, calc.ZERO}
+  elseif lib.is_const(u) then
+    return {calc.ZERO, u}
+  elseif lib.kind(u, '*') then
+    if algo.free_of(u, x) then
+      return {calc.ZERO, u}
+    elseif algo.free_of(S({'/', u, x}), x) then
+      return {S({'/', u, x}), calc.ZERO}
+    else
+      return nil
+    end
+  elseif lib.kind(u, '+') then
+    local f = algo.linear_form(lib.arg(u, 1), x)
+    if not f then return nil end
+    local r = algo.linear_form(S({'-', u, lib.arg(u, 1)}), x)
+    if not r then return nil end
+
+    return {S({'+', f[1], r[1]}),
+            S({'+', f[2], r[2]})}
+  elseif algo.free_of(u, x) then
+    return {calc.ZERO, u}
+  else
+    return nil
+  end
+end
+
+-- Match from a x ^ 2 + b x + c
+---@param u Expression
+---@param x Symbol
+---@return  Expression[]|nil
+function algo.quadratic_form(u, x)
+  local poly = require 'poly'
+  local ces = poly.gpe.coeff_list(u, x)
+  if #ces == 3 then
+    return {ces[3], ces[2], ces[1]}
+  end
+  return nil
 end
 
 function algo.expand_product(u, v)

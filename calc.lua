@@ -754,7 +754,11 @@ function calc.factorial(u)
 end
 
 local function sqrt_ii(n, m)
-  n = n ^ (1/m)
+  if m == 2 then
+    n = math.sqrt(n)
+  else
+    n = n ^ (1/m)
+  end
   if n == math.floor(n) then
     return n
   end
@@ -778,7 +782,7 @@ function calc.sqrt(u, n, approx_p)
   end
 
   n = lib.safe_int(n)
-  if approx_p then
+  if true or approx_p then -- BUG: !! symbolic mode crashes
     if n > 1 then
       return {'^', u, fraction.make(1, n)}
     else
@@ -790,6 +794,7 @@ function calc.sqrt(u, n, approx_p)
       return {'int', p}
     end
   end
+  --return {'fn', 'sqrt', u}
 end
 
 function calc.ln(x)

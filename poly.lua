@@ -6,6 +6,7 @@ local g = require 'global'
 local Env = require 'env'
 local dbg = require 'dbg'
 
+-- GPE = Genera Polynomial Expression
 local poly = { gpe = {} }
 
 ---@alias Polynom Expression
@@ -50,22 +51,37 @@ function poly.gpe.each_monom(u, fn)
   end
 end
 
--- Returns whether u is a polynom of s
----@param u Expression
----@param s table<Expression>
----@return  boolean
-function poly.gpe.check(u, s)
-  if lib.kind(u, '+') then
-    for _, v in ipairs(s) do
-      -- TODO: WRONG: Polynoms must have no exponent < 0 !
-      --       HOW CHECK IF SOMETHING IS A POLYNOM?
-      if algo.free_of(u, v) then
-        return false
-      end
+-- Tests if u is a valid monomial with respect to x
+-- Not true for GPEs.
+---@param u Polynom
+---@param x Symbol
+---@reutrn  boolean
+function poly.is_monomial(u, x)
+  local function test(u, x, inner)
+    if lib.kind(u, '^') then
+      return lib.compare(lib.arg(u, 1), x) and
+             lib.kind(lib.arg(u, 2), 'int') and
+             lib.safe_bool(calc.gt(lib.arg(u, 2), calc.ONE))
+    elseif not inner and lib.kind(u, '*') and lib.num_args(u) == 2 then
+      return inner(lib.arg(u, 1), x, true) and
+             inner(lib.arg(u, 1), x, true)
     end
-    return true
+    return lib.is_const(u) or
+           lib.compare(u, x)
   end
-  return false
+  return test(u, x, false)
+end
+
+-- Returns whether u is a polynom of x
+-- Not true for GPEs.
+---@param u Expression
+---@param x Symbol
+---@return  boolean
+function poly.is_poly(u, x)
+  if lib.kind(u, '+') then
+    return lib.all_args(u, poly.gpe.is_monomial, x)
+  end
+  return poly.gpe.is_monomial(u, x)
 end
 
 -- Find the highest degree of symbol x
@@ -124,36 +140,12 @@ function poly.gpe.coeff_list(u, x)
   assert(u and x, "missing arguments")
   local l = {}
 
-  -- Fill list with zeros up to n-1
-  local function add_for_degree(coeff, n)
-    while #l < n do
-      table.insert(l, calc.ZERO)
+  local deg = poly.gpe.degree(u, x)
+  if lib.safe_bool(calc.gteq(deg, calc.ZERO)) then
+    for n = 0, calc.to_number(deg) do
+      table.insert(l, poly.gpe.coeff(u, x, calc.make_int(n)))
     end
-    table.insert(l, coeff)
   end
-
-  poly.gpe.each_monom(u, function(m)
-    if algo.free_of(m, x) then
-      table.insert(l, m)
-    else
-      local deg = 0
-      local coeff = {'*'}
-      for i = 1, lib.num_args(m) do
-        local part = lib.arg(m, i)
-        if not lib.compare(base(part), x) then
-          -- Got coefficient part of x
-          table.insert(coeff, part)
-        else
-          -- Got symbol x
-          deg = calc.to_number(exponent(part) or {'int', 1})
-        end
-      end
-      if lib.num_args(coeff) == 0 then
-        coeff = {'int', 1}
-      end
-      add_for_degree(coeff, deg)
-    end
-  end)
 
   return l
 end
@@ -168,13 +160,14 @@ end
 ---@param j Expression  Expontent of x
 ---@return  Expression
 function poly.gpe.coeff(u, x, j)
+  local deg_zero = calc.is_zero_p(j)
   if lib.safe_bool(calc.gt(j, calc.ONE)) then
     x = {'^', x, j}
   end
 
   local r = {'+'}
   poly.gpe.each_monom(u, function(m)
-    if not algo.free_of(m, x) then
+    if not deg_zero and not algo.free_of(m, x) then
       for i = 1, lib.num_args(m) do
         local s = lib.arg(m, i)
         if lib.compare(s, x) then
@@ -192,6 +185,12 @@ function poly.gpe.coeff(u, x, j)
           end
           table.insert(r, c)
         end
+      end
+    elseif deg_zero and algo.free_of(m, x) then
+      if lib.num_args(m) == 1 then
+        table.insert(r, lib.arg(m, 1))
+      else
+        table.insert(r, m)
       end
     end
   end)
@@ -301,6 +300,38 @@ function poly.horner_form(u, x)
   end
 
   return build_form(0, #coeffs - 1)
+end
+
+function poly.horner_solve(u, x)
+  local form = poly.horner_form(u, x)
+  dbg.call('horner_solve', form)
+
+  local function solve_rec(v)
+    local offset, factor = lib.split_args_if(v, '+', 2)
+    if lib.kind(lib.arg(factor, 2)) ~= '+' then
+      --return {S({'/', offset, lib.arg(factor, 1)})}
+      return { S({'/', {'*', calc.NEG_ONE, offset}, lib.arg(factor, 1)}) }
+    end
+
+    factor = solve_rec(lib.arg(factor, 2))
+    print(dbg.dump({'                      =', factor}))
+
+    local r = {}
+    for _, f in ipairs(factor) do
+      if calc.is_zero_p(f) then
+        dbg.call('horner_solve factor zero offset=', offset)
+        table.insert(r, S({'*', calc.NEG_ONE, {'^', {'fn', 'abs', offset}, {'real', 0.5}}}))
+        table.insert(r, S({'*', calc.ONE, {'^', {'fn', 'abs', offset}, {'real', 0.5}}}))
+      else
+        local rr = S({'/', offset, f})
+        table.insert(r, rr)
+      end
+    end
+    --dbg.call('horner_solve', offset, '/', factor, ' = ', r)
+    return r
+  end
+
+  return util.list.prepend('vec', solve_rec(form))
 end
 
 return poly

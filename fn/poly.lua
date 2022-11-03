@@ -16,7 +16,7 @@ end)
 
 functions.def_lua('poly.coeff', {{name = 'u'},
                                  {name = 'x',   match = 'is_sym'},
-                                 {name = 'exp', match = 'is_natnum1', transform = 'as_int'}},
+                                 {name = 'exp', match = 'if_natnum1', transform = 'as_int'}},
 function (a, _)
   return poly.gpe.coeff(a.u, a.x, a.exp)
 end)

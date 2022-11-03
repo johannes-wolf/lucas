@@ -16,14 +16,14 @@ functions.attribs = {
 }
 
 functions.match = {
-  if_sym       = function(v) return lib.kind(v, 'sym') end,
-  if_tmp       = function(v) return lib.kind(v, 'tmp') end,
-  if_unit      = function(v) return lib.kind(v, 'unit') end,
-  if_const     = function(v) return lib.is_const(v) end,
-  if_container = function(v) return lib.is_container(v) end,
-  if_natnum0   = function(v) return calc.is_natnum_p(v, true) end,
-  if_natnum1   = function(v) return calc.is_natnum_p(v, false) end,
-  if_equation  = function(v) return lib.is_relop(v) end,
+  is_sym       = function(v) return lib.kind(v, 'sym') end,
+  is_tmp       = function(v) return lib.kind(v, 'tmp') end,
+  is_unit      = function(v) return lib.kind(v, 'unit') end,
+  is_const     = function(v) return lib.is_const(v) end,
+  is_container = function(v) return lib.is_container(v) end,
+  is_natnum0   = function(v) return calc.is_natnum_p(v, true) end,
+  is_natnum1   = function(v) return calc.is_natnum_p(v, false) end,
+  is_equation  = function(v) return lib.is_relop(v) end,
 }
 
 functions.transform = {

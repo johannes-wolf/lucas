@@ -3,6 +3,7 @@ local algo = require 'algorithm'
 local util = require 'util'
 local functions = require 'functions'
 local g = require 'global'
+local dbg = require 'dbg'
 
 functions.def_lua('abs', 1,
 function (a, _)
@@ -50,8 +51,8 @@ function (a, _)
 end)
 
 functions.def_lua('sqrt', {{name = 'v'},
-                           {name = 'n'}},
-function (a, _)
+                           {name = 'n', match = 'is_natnum1', opt = true}},
+function (a, env)
   return calc.sqrt(a.v, a.n, env.approx)
 end)
 
@@ -77,7 +78,7 @@ function (a, _)
 end)
 
 functions.def_lua('sum_seq', {{name = 'fn'},
-                              {name = 'index', match = 'is_tmp'},
+                              {name = 'index'},
                               {name = 'start'},
                               {name = 'stop', opt = true}},
 function (a, env)
@@ -85,7 +86,7 @@ function (a, env)
 end)
 
 functions.def_lua('prod_seq', {{name = 'fn'},
-                               {name = 'index', match = 'is_tmp'},
+                               {name = 'index'},
                                {name = 'start'},
                                {name = 'stop', opt = true}},
 function (a, _)
@@ -109,7 +110,7 @@ function (a, env)
 end, 'plain')
 
 functions.def_lua('seq', {{name = 'fn'},
-                          {name = 'index', match = 'is_tmp'},
+                          {name = 'index'},
                           {name = 'start'},
                           {name = 'stop', opt = true}},
 function (a, _)
@@ -124,6 +125,23 @@ end)
 functions.def_lua('denominator', 1,
 function(u)
   return algo.denominator(u[1])
+end)
+
+functions.def_lua('linear_form', 2,
+function(u)
+  local f = algo.linear_form(u[1], u[2])
+  print(dbg.dump(f))
+  if f then
+    return {'vec', f[1], f[2]}
+  end
+end)
+
+functions.def_lua('quadratic_form', 2,
+function(u)
+  local f = algo.quadratic_form(u[1], u[2])
+  if f then
+    return {'vec', f[1], f[2], f[3]}
+  end
 end)
 
 -- cases

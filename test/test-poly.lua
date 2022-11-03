@@ -12,6 +12,12 @@ function tests.poly_degree()
   Expect('poly.deg(3x^4+x^2,x)', '4')
 end
 
+function tests.poly_coeff()
+  Expect('poly.coeff(3,x,0)',        '3')
+  Expect('poly.coeff(3,x,1)',        '0')
+  Expect('poly.coeff(3x^2,x,2)',     '3')
+end
+
 function tests.poly_monomial_list()
   Expect('poly.monomial_list(1)',                 '{1}')
   Expect('poly.monomial_list(3x^4+x^2)',          '{x^2,3x^4}')
@@ -19,9 +25,10 @@ function tests.poly_monomial_list()
 end
 
 function tests.poly_coefficient_list()
-  Expect('poly.coefficient_list(1,x)',                 '{1}')
-  Expect('poly.coefficient_list(3x^4 + x^2,x)',        '{0,0,1,0,3}')
-  Expect('poly.coefficient_list(3x^4+b x^10+2 x+c,x)', '{c,2,0,0,3,0,0,0,0,0,b}')
+  Expect('poly.coefficient_list(1,x)',                     '{1}')
+  Expect('poly.coefficient_list(3x^4 + x^2,x)',            '{0,0,1,0,3}')
+  Expect('poly.coefficient_list(3x^4+b x^10+2 x+c,x)',     '{c,2,0,0,3,0,0,0,0,0,b}')
+  Expect('poly.coefficient_list(4+b x+3 x+a x^2+2 x^2,x)', '{4,b+3,a+2}')
 end
 
 function tests.poly_div()

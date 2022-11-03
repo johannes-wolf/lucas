@@ -51,7 +51,7 @@ function output.print_alg(u)
     elseif k == 'unit' then
       return format_unit(v)
     elseif k == 'vec' then
-      return '{'..table.concat(util.list.map(lib.get_args(v), print_alg_rec), ',')..'}'
+      return '{'..(table.concat(util.list.map(lib.get_args(v) or {}, print_alg_rec), ',') or 'ERR')..'}'
     elseif k == 'fn' then
       local a = lib.map(v, print_alg_rec, 0)
       return v[2]..'('..table.concat(a, ', ', 3)..')'

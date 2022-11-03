@@ -36,7 +36,7 @@ end
 ---@return any[]
 function list.map(l, fn, ...)
   local r = {}
-  for _, v in ipairs(l) do
+  for _, v in ipairs(l or {}) do
     local rv = fn(v, ...)
     if rv then
       table.insert(r, rv)
@@ -51,7 +51,7 @@ end
 ---@return any[]
 function list.mapi(l, fn, ...)
   local r = {}
-  for i, v in ipairs(l) do
+  for i, v in ipairs(l or {}) do
     local rv = fn(i, v, ...)
     if rv then
       table.insert(r, rv)
