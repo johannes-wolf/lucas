@@ -21,9 +21,9 @@ function (a, _)
   if a.expr and a.pattern and pattern.match(a.expr, a.pattern, vars) then
     local v = {'vec'}
     for k, m in pairs(vars) do
-      table.insert(v, {'vec', {'tmp', k}, m.expr})
+      table.insert(v, {'vec', {'tmp', k}, m})
     end
     return v
   end
-  return {'vec'}
+  return calc.FALSE
 end)

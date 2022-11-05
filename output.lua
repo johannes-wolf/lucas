@@ -3,9 +3,7 @@ local units = require 'units'
 local lib = require 'lib'
 local util = require 'util'
 
-local output = {
-  fancy_units = true,
-}
+local output = {}
 
 local function format_int(i)
   return string.format("%d", i[2])
@@ -23,13 +21,15 @@ local function format_sym(s)
   return lib.safe_sym(s)
 end
 
-local function format_unit(s)
-  if output.fancy_units then
-    local sym = units.table[s[2]].fancy
-    if sym then
-      return sym
-    end
+local function format_tmp(s)
+  s = lib.safe_sym(s)
+  if s == '_' or s == '__' then
+    return s
   end
+  return s..'_'
+end
+
+local function format_unit(s)
   return '_'..tostring(s[2])
 end
 
@@ -46,15 +46,19 @@ function output.print_alg(u)
       return format_float(v)
     elseif k == 'frac' then
       return format_frac(v)
-    elseif k == 'sym' or k == 'tmp' then
+    elseif k == 'sym' then
       return format_sym(v)
+    elseif k == 'tmp' then
+      return format_tmp(v)
     elseif k == 'unit' then
       return format_unit(v)
     elseif k == 'vec' then
-      return '{'..(table.concat(util.list.map(lib.get_args(v) or {}, print_alg_rec), ',') or 'ERR')..'}'
-    elseif k == 'fn' then
-      local a = lib.map(v, print_alg_rec, 0)
-      return v[2]..'('..table.concat(a, ', ', 3)..')'
+      return '{'..(table.concat(util.list.map(lib.get_args(v) or {}, print_alg_rec), ', ') or 'ERR')..'}'
+    elseif k == ';' then
+      return table.concat(util.list.map(lib.get_args(v) or {}, print_alg_rec), '; ') or 'ERR'
+    elseif k == 'call' then
+      return output.print_alg(lib.arg(v, 1))..
+        '['..(table.concat(util.list.map(lib.get_args(lib.arg(v, 2)) or {}, print_alg_rec), ', ') or 'ERR')..']'
     elseif k == '-' and lib.num_args(v) == 1 then
       return '-'..print_alg_rec(lib.arg(v, 1))
     elseif k == '^' then
@@ -104,14 +108,6 @@ function output.print_alg(u)
 end
 
 function output.print_sexp(u)
-  local function format_fn(s)
-    local r = nil
-    for i = 1 + lib.arg_offset(s), #s do
-      r = (r and r..' ' or '')..output.print_sexp(s[i])
-    end
-    return '('..lib.fn(s)..' '..(r or '')..')'
-  end
-
   local k = lib.kind(u)
   if k == 'int' then
     return format_int(u)
@@ -119,12 +115,14 @@ function output.print_sexp(u)
     return format_float(u)
   elseif k == 'frac' then
     return format_frac(u)
-  elseif k == 'sym' or k == 'tmp' then
+  elseif k == 'sym' then
     return format_sym(u)
+  elseif k == 'tmp' then
+    return format_tmp(u)
   elseif k == 'unit' then
     return format_unit(u)
-  elseif k == 'fn' then
-    return format_fn(u)
+  elseif k == 'call' then
+    return output.print_sexp(lib.arg(u, 1))..' '..output.print_sexp(lib.arg(u, 2))
   end
 
   if k then

@@ -20,14 +20,24 @@ end
 
 function Expect(ou, ov)
   local out = require 'output'
+
+  local function dump_env(env)
+    local str
+    for k, v in pairs(env.vars) do
+      str = (str and (str..' ') or '')..k..' = '..(out.print_alg(v.value or v.unit) or 'nil')
+    end
+    return str and '{'..str..'}' or '{}'
+  end
+
   local env = Env()
-  local u = (type(ou) == 'string' and Parse(ou)) or eval.eval(ou, env)
-  local v = (type(ov) == 'string' and Parse(ov)) or eval.eval(ov, env)
+  local u = (type(ou) == 'string' and Parse(ou)) or eval.eval(ou, Env(env))
+  local v = (type(ov) == 'string' and Parse(ov)) or eval.eval(ov, Env(env))
 
   if not lib.compare(u, v) then
     test.info('   input: '..(type(ou) ~= 'string' and dbg.dump(Parse(ou)) or ou))
     test.info('      is: '..out.print_alg(u))--..' = '..dbg.dump(u))
     test.info('expected: '..out.print_alg(v))--..' = '..dbg.dump(v))
+    test.info('     env: '..dump_env(env))
     test.assert(false)
   end
 end

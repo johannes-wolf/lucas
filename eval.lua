@@ -1,11 +1,12 @@
 local lib = require 'lib'
 local Env = require 'env'
 local simplify = require 'simplify'
-local functions = require 'functions'
+local fn = require 'functions'
 local pattern = require 'pattern'
 local calc = require 'calc'
 local algo = require 'algorithm'
 local g = require 'global'
+local util = require 'util'
 local dbg = require 'dbg'
 
 local eval = {}
@@ -23,9 +24,44 @@ local function allow_recall(a, b)
   return true
 end
 
-function eval.store(expr, eval_rhs, env)
-  env = Env.global
+function eval.store_sym(target, value, env)
+  assert(lib.kind(target, 'sym'))
+  env:set_var(target, value)
+end
 
+function eval.store_call(target, value, env)
+  assert(lib.kind(target, 'call'))
+
+  local ident = lib.arg(target, 1)
+  if not lib.kind(ident, 'sym') then
+    error('Invalid function name type: '..lib.kind(ident))
+    return calc.FALSE
+  end
+
+  error('NOT IMPLEMENTED')
+  --env:set_var(ident, )
+  --local param = lib.get_args(target, 2) or {}
+  --env:set_fn(target, value)
+end
+
+function eval.store_fn(expr, lazy, env)
+  assert(lib.num_args(expr) == 2)
+
+  local target, value = lib.arg(expr, 1), lib.arg(expr, 2)
+  if not lazy then
+    value = eval.eval(value, env)
+  end
+
+  if lib.kind(target, 'call') then
+    return eval.store_call(target, value, env)
+  elseif lib.kind(target, 'sym') then
+    return eval.store_sym(target, value, env)
+  else
+    error('Invalid target for store: '..lib.kind(expr))
+  end
+end
+
+function eval.store(expr, eval_rhs, env)
   local a, b = lib.arg(expr, 1), lib.arg(expr, 2)
   if eval_rhs then
     b = eval.eval(b, env)
@@ -33,14 +69,9 @@ function eval.store(expr, eval_rhs, env)
 
   if lib.kind(a, 'sym') then
     env:set_var(lib.sym(a), b)
-  elseif lib.kind(a, 'fn') then
-    local f = pattern.arg(a)
-    if not lib.kind(f, 'fn') then
-      error('expected function, got '..lib.kind(f))
-    end
-    env:set_fn(lib.safe_fn(f), a, b)
-  elseif lib.kind(a, 'unit') then
-    env:set_unit(lib.unit(a), b)
+  elseif lib.kind(a, 'call') then
+    -- TODO
+    error('NOT IMPLEMENTED')
   else
     g.error('store: Invalid pattern')
   end
@@ -48,30 +79,53 @@ function eval.store(expr, eval_rhs, env)
   return expr
 end
 
--- The function 'hold' suppresses evaluation for its argument one time.
-function eval.fn_hold(expr)
-  return lib.arg(expr, 1)
-end
-
-function eval.fn(expr, env)
-  -- Hardcoded path for 'hold'
-  if lib.safe_fn(expr) == 'hold' then
-    return eval.fn_hold(expr)
-  end
-
-  -- Hardcoded path for 'plain'
-  if lib.safe_fn(expr) == 'plain' then
+function eval.call(expr, env)
+  if lib.kind(lib.arg(expr, 1)) ~= 'sym' then
     return expr
   end
 
-  -- Evaluate arguments first
-  if not functions.get_attrib(expr, functions.attribs.plain, env) then
-    expr = lib.map(expr, eval.eval, env)
+  local sym = eval.eval(lib.arg(expr, 1), env)
+  local ident = lib.safe_sym(sym)
+
+  -- Hardcoded path for 'hold'
+  if ident == 'hold' or ident == 'hold_form' then
+    return expr
   end
 
-  local u = functions.call(expr, env)
-  if u and allow_recall(expr, u) then
-    return eval.eval(u, env)
+  local args = lib.arg(expr, 2)
+  local attribs = env:get_attribs(ident)
+
+  local listable = util.set.contains(attribs, fn.attribs.listable)
+  if listable and lib.num_args(args) > 1 then
+    if lib.kind(lib.arg(args, 1), 'vec') then
+      return lib.mapi(lib.arg(args, 1), function( sub)
+        return {'call', sym, util.list.join({'vec', sub}, lib.get_args(args, 2))}
+      end)
+    end
+  end
+
+  local hold_all = util.set.contains(attribs, fn.attribs.hold_all)
+  local hold_first = hold_all or util.set.contains(attribs, fn.attribs.hold_first)
+  local hold_rest = hold_all or util.set.contains(attribs, fn.attribs.hold_rest)
+  if not hold_all then
+    args = lib.mapi(args, function(i, sub)
+      if i == 1 and not hold_first then
+        return eval.eval(sub, env)
+      elseif i > 1 and not hold_rest then
+        return eval.eval(sub, env)
+      end
+      return sub
+    end)
+  end
+
+  print('CALL: '..ident..' with '..dbg.dump(args))
+  local r = fn.call(ident, expr, args, env)
+  if r then
+    if allow_recall(expr, r) then
+      return eval.eval(r, env)
+    else
+      return r
+    end
   end
 
   return expr
@@ -94,9 +148,9 @@ end
 function eval.unit(expr, env)
   local u = lib.safe_unit(expr)
   if env then
-    local v = env:get_unit(u)
-    if v and v.value and allow_recall(expr, v.value) then
-      return eval.eval(v.value, env)
+    local v = env:get_var(u)
+    if v and v.unit and allow_recall(expr, v.unit) then
+      return eval.eval(v.unit, env)
     end
   end
   return expr
@@ -107,13 +161,10 @@ function eval.with_assign(expr, env)
   if lib.kind(sym, 'sym') then
     env:set_var(lib.sym(sym), replacement)
   elseif lib.kind(sym, 'unit') then
-    env:set_unit(lib.unit(sym), replacement)
-  elseif lib.kind(sym, 'fn') then
-    local f = pattern.arg(sym)
-    if not lib.kind(f, 'fn') then
-      error('expected function, got '..lib.kind(f))
-    end
-    env:set_fn(lib.safe_fn(f), sym, replacement)
+    env:set_var(lib.unit(sym), replacement)
+  elseif lib.kind(sym, 'call') then
+    -- TODO: :-)
+    --env:set_fn(lib.safe_fn(f), sym, replacement)
   else
     error('not implemented')
   end
@@ -139,6 +190,14 @@ function eval.with(expr, env)
   return eval.eval(target, sub_env)
 end
 
+function eval.stmt(expr, env)
+  local r
+  for i = 1, lib.num_args(expr) do
+    r = eval.eval(lib.arg(expr, i), env)
+  end
+  return r
+end
+
 function eval.eval_rec(expr, env)
   if lib.is_const(expr) then
     return expr
@@ -146,16 +205,18 @@ function eval.eval_rec(expr, env)
     return eval.sym(expr, env)
   elseif lib.kind(expr, 'unit') then
     return eval.unit(expr, env)
-  elseif lib.kind(expr, ':=') then
-    return eval.store(expr, false, env)
+  --elseif lib.kind(expr, ':=') then
+  --  return eval.store(expr, false, env)
   elseif lib.kind(expr, ':==') then
     return eval.store(expr, true, env)
   elseif lib.kind(expr, '::') then
     return eval.condition(expr, env)
   elseif lib.kind(expr, '|') then
     return eval.with(expr, env)
-  elseif lib.kind(expr, 'fn') then
-    return eval.fn(expr, env)
+  elseif lib.kind(expr, 'call') then
+    return eval.call(expr, env)
+  elseif lib.kind(expr, ';') then
+    return eval.stmt(expr, env)
   else
     return lib.map(expr, eval.eval_rec, env)
   end

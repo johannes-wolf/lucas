@@ -38,7 +38,7 @@ function vector.norm(t)
     for i = 1, lib.num_args(t) do
       table.insert(n, {'^', lib.arg(t, i), {'int', 2}})
     end
-    return {'fn', 'sqrt', util.list.prepend('+', n)}
+    return calc.make_fn_call('sqrt', util.list.prepend('+', n))
   end
   return nil
 end

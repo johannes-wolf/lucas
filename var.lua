@@ -1,9 +1,9 @@
-local vars = { table = {} }
+local vars = {}
 
 function vars.def(name, descr, exact, approx)
+  local Env = require 'env'
   local input = require 'input'
   local simplify = require 'simplify'
-  local Env = require 'env'
 
   if type(exact) == 'string' then
     exact = simplify.expr(input.read_expression(exact), Env())
@@ -11,11 +11,10 @@ function vars.def(name, descr, exact, approx)
   if type(approx) == 'string' then
     approx = simplify.expr(input.read_expression(approx), Env())
   end
-  vars.table[name] = {
-    const = true,
-    value = exact,
-    approx = approx,
-  }
+
+  local v = Env.global:set_var(name, exact)
+  v.const = true
+  v.approx = approx
 end
 
 vars.def('e',         'Eulers number e',     nil,  '2.718281828459045235360')

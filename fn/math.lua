@@ -144,6 +144,12 @@ function(u)
   end
 end)
 
+functions.def_lua('solve', 2,
+function(u, env)
+  local solve = require 'solve'
+  return solve.solve(u[1], u[2], env)
+end)
+
 -- cases
 --   cases([cond1, then1] ..., else)
 --

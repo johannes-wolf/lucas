@@ -9,13 +9,7 @@ local function parse_syntax(s, i)
 end
 
 local function parse_identifier(s, i)
-  return s:find('^([%a$][._\'"%w]*[_\'"%w]*)', i)
-end
-
-local function parse_unit(s, i)
-  if s:sub(i, i) == '_' then
-    return parse_identifier(s, i + 1)
-  end
+  return s:find('^(_?[$%a_][.\'"$%w]*[$_\'"%w]*)', i)
 end
 
 local function parse_string_literal(s, i)
@@ -71,7 +65,6 @@ local function lex(str)
     {parse_operator, 'o'},
     --{parse_string_literal, 'str'},
     {parse_identifier, 'id'},
-    {parse_unit, 'u'},
     {parse_syntax, 's'},
     {parse_float, 'f'},
     {parse_number, 'n'},

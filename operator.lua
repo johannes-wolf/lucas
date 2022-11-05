@@ -36,9 +36,10 @@ end
 function op.def_fn_operator(sym, name, kind, prec, fn)
   local t = op.def_operator(sym, name, kind, prec)
   if type(fn) == 'string' then
-    t.simplify = function(ns_expr, env)
-      local e = {'fn', fn}
-      return lib.copy_args(ns_expr:simplify(), e)
+    t.simplify = function(ns_expr, _)
+      local args = {'vec'}
+      lib.copy_args(ns_expr:simplify(), args)
+      return {'call', {'sym', fn}, args}
     end
   else
     t.simplify = fn
@@ -46,8 +47,8 @@ function op.def_fn_operator(sym, name, kind, prec, fn)
   return t
 end
 
-op.def_operator(':=',  'assign', 'infix',   1) -- Assignment
-op.def_operator(':==', 'set',    'infix',   1) -- Assignment (evaluated rhs)
+op.def_fn_operator(':=',  'assign',   'infix', 1, 'store')      -- Assignment
+op.def_fn_operator(':==', 'assign_e', 'infix', 1, 'store_eval') -- Assignment (evaluated rest)
 op.def_operator('|',   'with',   'infix',   2) -- With
 
 op.def_operator('or',  'or',     'infix',   3)
@@ -57,7 +58,7 @@ op.def_operator('not', 'not',    'prefix',  5)
 op.def_operator('=',   'eq',     'infix',   6)
 op.def_operator('!=',  'neq',    'infix',   6)
 
-op.def_operator('::',  'cond',   'infix',   6) -- Pattern condition (use nested or parens instead of 'and' to work around precedence conflicts)
+--op.def_operator('::',  'cond',   'infix',   6) -- Pattern condition (use nested or parens instead of 'and' to work around precedence conflicts)
 
 op.def_operator('<',   'lt',     'infix',   8)
 op.def_operator('<=',  'lteq',   'infix',   8)

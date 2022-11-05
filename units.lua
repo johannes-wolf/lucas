@@ -120,7 +120,7 @@ end
 ---@param u table     Expression
 ---@return table|nil  Unit expression
 function units.extract_units(u)
-  if lib.is_const(u) or lib.kind(u, 'fn', 'sym') then
+  if lib.is_const(u) or lib.kind(u, 'call', 'sym') then
     return nil
   elseif lib.kind(u, 'unit') then
     return u

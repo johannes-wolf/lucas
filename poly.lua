@@ -222,7 +222,7 @@ function poly.variables(u)
       if lib.kind(s, 'sym') then
         -- Catch symbols 'x'
         table.insert(r, s)
-      elseif lib.kind(s, 'fn') and not lib.is_const(lib.arg(s, 1)) then
+      elseif lib.kind(s, 'call') and not lib.is_const(lib.arg(lib.arg(s, 2), 1)) then
         -- Catch functions with symbols 'sin(x)'
         table.insert(r, s)
       end
@@ -300,38 +300,6 @@ function poly.horner_form(u, x)
   end
 
   return build_form(0, #coeffs - 1)
-end
-
-function poly.horner_solve(u, x)
-  local form = poly.horner_form(u, x)
-  dbg.call('horner_solve', form)
-
-  local function solve_rec(v)
-    local offset, factor = lib.split_args_if(v, '+', 2)
-    if lib.kind(lib.arg(factor, 2)) ~= '+' then
-      --return {S({'/', offset, lib.arg(factor, 1)})}
-      return { S({'/', {'*', calc.NEG_ONE, offset}, lib.arg(factor, 1)}) }
-    end
-
-    factor = solve_rec(lib.arg(factor, 2))
-    print(dbg.dump({'                      =', factor}))
-
-    local r = {}
-    for _, f in ipairs(factor) do
-      if calc.is_zero_p(f) then
-        dbg.call('horner_solve factor zero offset=', offset)
-        table.insert(r, S({'*', calc.NEG_ONE, {'^', {'fn', 'abs', offset}, {'real', 0.5}}}))
-        table.insert(r, S({'*', calc.ONE, {'^', {'fn', 'abs', offset}, {'real', 0.5}}}))
-      else
-        local rr = S({'/', offset, f})
-        table.insert(r, rr)
-      end
-    end
-    --dbg.call('horner_solve', offset, '/', factor, ' = ', r)
-    return r
-  end
-
-  return util.list.prepend('vec', solve_rec(form))
 end
 
 return poly

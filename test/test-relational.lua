@@ -1,5 +1,7 @@
 local tests = {}
 
+require 'var'
+
 function tests.eq()
   Expect('1=1',     'true')
   Expect('1=2',     'false')
@@ -15,12 +17,12 @@ function tests.eq()
   Expect('a=a',     'true')
   Expect('_a=_a',   'true')
 
-  Expect('vec(1)=1',          'false')
-  Expect('vec(1)=vec(1)',     'true')
-  Expect('vec(2,1)=vec(1,2)', 'false')
-  Expect('vec(1,2)=vec(1,2)', 'true')
-  Expect('vec(a,2)=vec(b,2)', 'vec(a,2)=vec(b,2)')
-  Expect('vec(a,2)=vec(a,2)', 'true')
+  Expect('vec[1  ]=1',        'false')
+  Expect('vec[1  ]=vec[1  ]', 'true')
+  Expect('vec[2,1]=vec[1,2]', 'false')
+  Expect('vec[1,2]=vec[1,2]', 'true')
+  Expect('vec[a,2]=vec[b,2]', 'vec[a,2]=vec[b,2]')
+  Expect('vec[a,2]=vec[a,2]', 'true')
 
   Expect('inf=inf', 'true')
 end

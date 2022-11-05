@@ -14,7 +14,7 @@ end)
 
 functions.def_lua('op_list', 1,
 function (a, _)
-  return a[1] and util.list.prepend('vec', lib.get_args(a[1]))
+  return a[1] and util.list.prepend('vec', lib.get_args(a[1]) or {})
 end)
 
 functions.def_lua('num_op', 1,
@@ -24,15 +24,20 @@ end)
 
 functions.def_lua('kind', 1,
 function (a, _)
+  local expr = a[1]
   local kind
-  if lib.kind(a[1], 'fn') then
-    kind = lib.safe_fn(a[1]) or 'nil'
+  if lib.kind(expr, 'call') then
+    if lib.kind(lib.arg(expr, 1), 'sym') then
+      kind = lib.safe_sym(lib.arg(expr, 1)) or 'nil'
+    else
+      return 'anonymous'
+    end
   else
-    kind = operator.name[lib.kind(a[1])]
+    kind = operator.name[lib.kind(expr)]
     if kind then
       kind = 'op_'..kind
     elseif not kind then
-      kind = lib.kind(a[1]) or 'nil'
+      kind = lib.kind(expr) or 'nil'
     end
   end
   return {'sym', kind}
@@ -55,4 +60,17 @@ function (a, _)
     return simplify.order.front(x, y)
   end)
   return util.list.prepend('vec', a)
+end)
+
+functions.def_lua('hold_form', 1,
+function (a, _)
+  return {'call', {'sym', 'hold'}, {'vec', a[1]}}
+end)
+
+functions.def_lua('release', 1,
+function (a, _)
+  if lib.safe_call_sym(a[1]) == 'plain' then
+    return lib.arg(lib.arg(a[1], 2), 1)
+  end
+  return a[1]
 end)

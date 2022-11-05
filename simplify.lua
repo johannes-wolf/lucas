@@ -1,7 +1,9 @@
 local lib = require 'lib'
 local util = require 'util'
 local calc = require 'calc'
+local pattern = require 'pattern'
 local functions = require 'functions'
+local algo = require 'algorithm'
 local op = require 'operator'
 local dbg = require 'dbg'
 
@@ -26,7 +28,7 @@ end
 --   x^2 => x
 --   x   => x
 local function base(u)
-  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'call') then
     return u
   elseif lib.kind(u, '^') then
     return lib.arg(u, 1)
@@ -42,7 +44,7 @@ end
 --   x^2 => 2
 --   x   => 1
 local function exponent(u)
-  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'call') then
     return {'int', 1}
   elseif lib.kind(u, '^') then
     return lib.arg(u, 2)
@@ -59,7 +61,7 @@ end
 --   2*y => *y
 --   x*y => x*y
 local function term(u)
-  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '+', '^', '!', 'fn') then
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '+', '^', '!', 'call') then
     -- Return the uession as binary product (* u)
     return {'*', u}
   elseif lib.kind(u, '*') and lib.is_const(lib.arg(u, 1)) then
@@ -81,7 +83,7 @@ end
 --   2*y => 2
 --   x*y => 1
 local function const(expr)
-  if lib.kind(expr, 'vec', 'sym', 'tmp', 'unit', '+', '^', '!', 'fn') then
+  if lib.kind(expr, 'vec', 'sym', 'tmp', 'unit', '+', '^', '!', 'call') then
     return {'int', 1}
   elseif lib.kind(expr, '*') and lib.is_const(lib.arg(expr, 1)) then
     return lib.arg(expr, 1)
@@ -130,20 +132,21 @@ function order.power(u, v)
   end
 end
 
-function order.fn(u, v)
-  if lib.fn(u) ~= lib.fn(v) then
-    return order.lexicographical(lib.fn(u), lib.fn(v))
+function order.call(u, v)
+  if not lib.compare(lib.arg(u, 1), lib.arg(v, 1)) then
+    return order.front(lib.arg(u, 1), lib.arg(v, 1))
   else
-    local m, n = lib.num_args(u), lib.num_args(v)
+    local ua, va = lib.arg(u, 2), lib.arg(v, 2)
+    local m, n = lib.num_args(ua), lib.num_args(va)
 
-    for j = 1, math.min(m, n) do
-      if not lib.compare(lib.arg(u, j), lib.arg(u, j)) then
-        return order.front(lib.arg(u, j), lib.arg(u, j))
+    for j = 2, math.min(m, n) do
+      if not lib.compare(lib.arg(ua, j), lib.arg(va, j)) then
+        return order.front(lib.arg(ua, j), lib.arg(va, j))
       end
     end
 
     local k = math.min(m, n)
-    if lib.compare(lib.arg(u, k), lib.arg(u, k)) then
+    if lib.compare(lib.arg(ua, k), lib.arg(va, k)) then
       return m < m
     end
   end
@@ -170,31 +173,31 @@ function order.front(u, v)
       return order.power(u, v)
     elseif uk == '!' then
       return order.front(lib.arg(u, 1), lib.arg(v, 1))
-    elseif uk == 'fn' then
-      return order.fn(u, v)
+    elseif uk == 'call' then
+      return order.call(u, v)
     else
       return false
     end
   else
     if lib.is_const(u) and not lib.is_const(v) then
       return true
-    elseif uk == '*' and (vk == '^' or vk == '+' or vk == '!' or vk == 'fn' or vk == 'sym') then
+    elseif uk == '*' and (vk == '^' or vk == '+' or vk == '!' or vk == 'call' or vk == 'sym') then
       return order.front(u, {'*', v})
-    elseif uk == '^' and (vk == '+' or vk == '!' or vk == 'fn' or vk == 'sym') then
+    elseif uk == '^' and (vk == '+' or vk == '!' or vk == 'call' or vk == 'sym') then
       return order.front(u, {'^', v, calc.ONE})
-    elseif uk == '+' and (vk == '!' or vk == 'fn' or vk == 'sym') then
+    elseif uk == '+' and (vk == '!' or vk == 'call' or vk == 'sym') then
       return order.front(u, {'+', v})
-    elseif uk == '!' and (vk == 'fn' or vk == 'sym') then
+    elseif uk == '!' and (vk == 'call' or vk == 'sym') then
       if lib.compare(lib.arg(u, 1), v) then
         return false
       else
         return order.front(u, {'!', v})
       end
-    elseif uk == 'fn' and (vk == 'sym') then
-      if lib.fn(u) == lib.sym(v) then
+    elseif uk == 'call' and vk == 'sym' then
+      if lib.safe_call_sym(u) == lib.sym(v) then
         return false
       else
-        return order.lexicographical(lib.fn(u), lib.sym(v))
+        return order.lexicographical(lib.safe_call_sym(u), lib.sym(v))
       end
     elseif uk == 'unit' then
       return false
@@ -204,7 +207,6 @@ function order.front(u, v)
       return not order.front(v, u)
     end
   end
-  error('unreachable: '..dbg.dump({u, v}))
 end
 
 local function merge_operands(p, q, base_simp, ...)
@@ -537,7 +539,7 @@ function simplify.power(expr)
   elseif eq_const(e, 1) then
     return b
   elseif lib.safe_sym(b) == 'e' then
-    return {'fn', 'exp', e}
+    return calc.make_fn_call('exp', e)
   else
     return {'^', b, e}
   end
@@ -583,40 +585,80 @@ local auto_map_fn = {
   'sqrt', 'abs',
 }
 
-function simplify.fn(u, env)
-  trace_step('fn', u)
+-- Simplify vector call (subscript)
+--
+--   {a, b, c}[2] => 2
+function simplify.vector_call(u, env)
+  local vec = lib.arg(u, 1)
+  local args = lib.arg(u, 2)
 
-  local name = lib.safe_fn(u)
-  if name == 'plain' then
-    return u
+  for i = 1, lib.num_args(args) do
+    local arg = simplify.expr(lib.arg(args, i), env)
+    assert(arg)
+
+    local idx = calc.to_number(arg, 'int')
+    if idx then
+      if idx < 0 then
+        idx = lib.num_args(vec) + idx + 1
+      end
+
+      vec = lib.arg(vec, idx)
+      if not vec then
+        error('Subscript out of range: '..idx)
+        return calc.ERROR
+      end
+    else
+      error('Invalid subscript index type: '..lib.kind(arg))
+      return calc.ERROR
+    end
   end
 
-  -- Do not simplify arguments if tagged as 'plain'
-  if not functions.get_attrib(u, functions.attribs.plain, env) then
+  return vec
+end
+
+--[[
+-- Simplify anonymous call
+--   ($1 + 1)[10]  => simplify(10 + 1)
+--   ($@)[1, 2, 3] => {1, 2, 3}
+function simplify.anonymous_call(u)
+  local target = lib.arg(u, 1)
+  local args = lib.arg(u, 2)
+  assert(target)
+
+  return pattern.substitute_kind(target, 'tmp', function(sub)
+    local ident = lib.safe_tmp(sub) or ''
+
+    local index = tonumber(select(3, ident:find('^([%d]+)$'))) or 0
+    if index > 0 then -- Get arg at index
+      return lib.arg(args, index)
+    elseif ident == '@' then -- Get argument vector
+      return args
+    end
+
+    return sub
+  end)
+end
+]]--
+
+function simplify.call(u, env)
+  local target = lib.arg(u, 1)
+  if lib.kind(target, 'sym') then
+    -- Named function
+    local ident = lib.sym(target)
+    if ident == 'plain' or ident == 'hold' then
+      return u
+    end
+
     u = lib.map(u, simplify.expr, env)
+    return u -- TODO: Call function?
+  elseif lib.kind(target, 'vec') then
+    -- Subscript
+    u = lib.map(u, simplify.expr, env)
+    return simplify.vector_call(u, env)
   end
-
-  -- If allowed, map function over collection
-  if lib.num_args(u) == 1 and lib.is_collection(lib.arg(u, 1)) then
-    if util.set.contains(auto_map_fn, name) then
-      return lib.map(lib.arg(u, 1), function(v)
-        return simplify.expr({'fn', name, v}, env)
-      end)
-    end
-  end
-
-  -- If allowed, call function durring simplification
-  if util.set.contains(allowed_fn, name) then
-    if lib.all_args(u, lib.is_const) then
-      return functions.call(u, env)
-    end
-  end
-  return u
 end
 
 function simplify.unit(expr, env)
-  trace_step('unit', expr)
-
   return expr
 end
 
@@ -671,7 +713,7 @@ function simplify.nary_operator(u, k, fn, neutral)
   elseif lib.num_args(u) == 1 then
     return lib.arg(u, 1)
   else
-    local v = simplify.nary_operator_rec(lib.get_args(u), k, fn) or {}
+    local v = simplify.nary_operator_rec(lib.get_args(u) or {}, k, fn) or {}
     if #v == 1 then
       return v[1]
     elseif #v >= 2 then
@@ -759,7 +801,7 @@ function simplify.condition(u, env)
   if not b or lib.safe_bool(b) then
     return a
   end
-  return {'fn', 'cond', a, b}
+  return {'call', {'sym', 'cond'}, a, b}
 end
 
 -- Returns a table with expression expr, env and a convenient
@@ -790,10 +832,10 @@ function simplify.expr(expr, env)
     return simplify.relation(expr, env)
   elseif lib.kind(expr, '|') then
     return simplify.with(expr, env)
-  elseif lib.kind(expr, 'fn') then
-    return simplify.fn(expr, env)
-  elseif lib.kind(expr, ':=') then
-    return expr
+  elseif lib.kind(expr, 'call') then
+    return simplify.call(expr, env)
+  --elseif lib.kind(expr, ':=') then
+  --  return expr
   else
     local k = lib.kind(expr)
 

@@ -7,12 +7,14 @@ local Env = require 'env'
 local dbg = require 'dbg'
 local g = require 'global'
 
-local functions = { table = {} }
+local functions = {}
 
 ---@enum
 functions.attribs = {
-  plain    = 'plain',
-  no_units = 'no_units',
+  hold_first = 'hold_first',
+  hold_rest  = 'hold_rest',
+  hold_all   = 'hold_all',
+  listable   = 'listable',
 }
 
 functions.match = {
@@ -109,10 +111,7 @@ function functions.def_lua(name, args, fn, ...)
     end
   end
 
-  functions.table[name] = {
-    fn = new_fn,
-    attribs = {...},
-  }
+  Env.global:set_var(name, new_fn, ...)
 end
 
 -- Define function that gets arguments passed unevaluated
@@ -125,9 +124,9 @@ functions.def_lua('approx', 1, function(u, env)
   return eval.eval(u[1], Env(env, 'approx'))
 end, 'plain')
 
-functions.def_lua('fact', 1, function(u)
-  return calc.factorial(u)
-end)
+--functions.def_lua('fact', 1, function(u)
+--  return calc.factorial(u)
+--end)
 
 
 -- Debug
@@ -164,7 +163,7 @@ local function isa_helper(args, k)
   return {'int', 1}
 end
 
-functions.def_lua('is.function', 'var', function(u) return isa_helper(u, 'fn') end)
+functions.def_lua('is.function', 'var', function(u) return isa_helper(u, 'call') end)
 functions.def_lua('is.unit',     'var', function(u) return isa_helper(u, 'unit') end)
 functions.def_lua('is.symbol',   'var', function(u) return isa_helper(u, 'sym') end)
 functions.def_lua('is.integer',  'var', function(u) return isa_helper(u, 'int') end)
@@ -178,84 +177,37 @@ functions.def_lua('units.extract', 1, function(u) return units.extract_units(u[1
 
 -- Pattern stub functions to prevent argument evaluation
 for _, v in ipairs(pattern.pattern_fn) do
-  functions.def_lua(v, 'var',  function() end, 'plain')
+  functions.def_lua(v, 'var',  function() end, functions.attribs.hold_all)
 end
 
-
--- Reorder funciton patterns by argument count and type
--- Order by constant
-function functions.reorder_rules(f)
-  local function score_kind(k)
-    if lib.is_const(k) then return 0 end
-    if lib.kind(k, 'sym', 'fn') then return 1 end
-    return 2
-  end
-
-  local function order_first(a, b)
-    a = a.pattern; b = b.pattern
-    assert(lib.kind(a, 'fn') and lib.kind(b, 'fn'))
-
-    if lib.num_args(a) < lib.num_args(b) then
-      return true
-    elseif lib.num_args(a) > lib.num_args(b) then
-      return false
-    end
-
-    for i = 1, lib.num_args(a) do
-      local x, y = score_kind(lib.arg(a, i)), score_kind(lib.arg(b, i))
-      if x ~= y then
-        return x < y
-      end
-    end
-
-    return false
-  end
-
-  if f.rules then
-    table.sort(f.rules, order_first)
-  end
-end
-
-function functions.get_attrib(call, name, env)
-  local f = env:get_fn(lib.safe_fn(call))
-  return f and util.set.contains(f.attribs or {}, name)
-end
-
-function functions.call(call, env)
-  assert(lib.kind(call, 'fn'))
-
-  local eval = require 'eval'
-
-  local name = lib.fn(call)
+-- Helper function for calling functions
+function functions.call(name, call, arguments, env)
   assert(name)
+  assert(arguments and lib.kind(arguments, 'vec'))
 
-  local f = env:get_fn(name)
-  if f then
-    if functions.get_attrib(f, functions.attribs.no_units, env) then
-      call = units.remove_units(call)
+  local v = env:get_var(name)
+  if not v then return nil end
+
+  if v.lua_fn then
+    local ok, res = pcall(v.lua_fn, lib.get_args(arguments) or {}, env)
+    if ok then
+      return res
+    elseif type(res) == 'string' then
+      g.error(res)
     end
-
-    if f.rules then
-      -- CAS function
-      for _, ov in ipairs(f.rules) do
-        local ok, match = pattern.match(call, ov.pattern)
-        if ok then
-          local sfn = pattern.substitute(ov.replacement, match)
-          return eval.eval(sfn, env)
-        end
+  elseif v.rules then
+    for _, r in ipairs(v.rules) do
+      local vars = {}
+      if pattern.match(call, r.pattern, vars) then
+        return pattern.substitute(r.expr, vars)
       end
     end
 
-    if f.fn then
-      -- Lua based function
-      local ok, res = pcall(f.fn, lib.get_args(call) or {}, env)
-      if ok then
-        return res
-      elseif type(res) == 'string' then
-        g.error(res)
-      end
-    end
+    return nil -- No match
+  else
+    error('Invalid call type')
   end
+
   return nil
 end
 

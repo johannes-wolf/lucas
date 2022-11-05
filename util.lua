@@ -168,6 +168,7 @@ function set.unique(l, cmp)
 end
 
 function set.contains(l, needle, cmp)
+  if not l then return false end
   cmp = cmp or tab.compare
   for _, v in ipairs(l) do
     if cmp(v, needle) then return true end
@@ -176,8 +177,8 @@ end
 
 function set.union(a, b)
   local c = {}
-  for _, v in ipairs(a) do table.insert(c, v) end
-  for _, v in ipairs(b) do table.insert(c, v) end
+  for _, v in ipairs(a or {}) do table.insert(c, v) end
+  for _, v in ipairs(b or {}) do table.insert(c, v) end
   return c
 end
 

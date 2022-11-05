@@ -21,7 +21,7 @@ function tests.is_zero_p()
   test.FALSE(calc.is_zero_p({'sym', 'a'}))
   test.FALSE(calc.is_zero_p({'tmp', 'a_'}))
   test.FALSE(calc.is_zero_p({'unit', '_a'}))
-  test.FALSE(calc.is_zero_p({'fn', 'a'}))
+  test.FALSE(calc.is_zero_p({'call', {'sym', 'a'}, {'vec'}}))
 end
 
 function tests.is_nan_p()
@@ -63,7 +63,7 @@ function tests.is_ratnum_p()
   test.FALSE(calc.is_ratnum_p({'sym', 'a'}))
   test.FALSE(calc.is_ratnum_p({'tmp', 'a_'}))
   test.FALSE(calc.is_ratnum_p({'unit', '_a'}))
-  test.FALSE(calc.is_ratnum_p({'fn', 'a'}))
+  test.FALSE(calc.is_ratnum_p({'call', {'sym', 'a'}, {'vec'}}))
 end
 
 function tests.is_true_p()
@@ -77,13 +77,13 @@ function tests.is_true_p()
   test.FALSE(calc.is_true_p({'sym', 'a'}))
   test.FALSE(calc.is_true_p({'tmp', 'a_'}))
   test.FALSE(calc.is_true_p({'unit', '_a'}))
-  test.FALSE(calc.is_true_p({'fn', 'a'}))
+  test.FALSE(calc.is_true_p({'call', {'sym', 'a'}, {'vec'}}))
 end
 
 function tests.gcd()
-  Expect('gcd(3,0)', 'nan')
-  Expect('gcd(3,2)', '1')
-  Expect('gcd(3,9)', '3')
+  Expect('gcd[3,0]', 'nan')
+  Expect('gcd[3,2]', '1')
+  Expect('gcd[3,9]', '3')
 end
 
 function tests.negate()
@@ -97,37 +97,37 @@ function tests.negate()
 end
 
 function tests.floor()
-  Expect('floor(1)',    '1')
-  Expect('floor(1.1)',  '1')
-  Expect('floor(1.99)', '1')
-  Expect('floor(2)',    '2')
-  Expect('floor(1:2)',  '0')
-  Expect('floor(a)',    'floor(a)')
-  Expect('floor(inf)',  'floor(inf)')
+  Expect('floor[1]',    '1')
+  Expect('floor[1.1]',  '1')
+  Expect('floor[1.99]', '1')
+  Expect('floor[2]',    '2')
+  Expect('floor[1:2]',  '0')
+  Expect('floor[a]',    'floor[a]')
+  Expect('floor[inf]',  'floor[inf]')
 end
 
 function tests.ceil()
-  Expect('ceil(1)',    '1')
-  Expect('ceil(1.1)',  '2')
-  Expect('ceil(1.99)', '2')
-  Expect('ceil(2)',    '2')
-  Expect('ceil(1:2)',  '1')
-  Expect('ceil(a)',    'ceil(a)')
-  Expect('ceil(inf)',  'ceil(inf)')
+  Expect('ceil[1]',    '1')
+  Expect('ceil[1.1]',  '2')
+  Expect('ceil[1.99]', '2')
+  Expect('ceil[2]',    '2')
+  Expect('ceil[1:2]',  '1')
+  Expect('ceil[a]',    'ceil[a]')
+  Expect('ceil[inf]',  'ceil[inf]')
 end
 
 function tests.numerator()
-  Expect('numerator(1:2)',    '1')
-  Expect('numerator(a^b)',    'a^b')
-  Expect('numerator(a^2)',    'a^2')
-  Expect('numerator(a^(-2))', '1')
+  Expect('numerator[1:2]',    '1')
+  Expect('numerator[a^b]',    'a^b')
+  Expect('numerator[a^2]',    'a^2')
+  Expect('numerator[a^(-2)]', '1')
 end
 
 function tests.denominator()
-  Expect('denominator(1:2)',    '2')
-  Expect('denominator(a^b)',    '1')
-  Expect('denominator(a^2)',    '1')
-  Expect('denominator(a^(-2))', '(a^(-2))^(-1)')
+  Expect('denominator[1:2]',    '2')
+  Expect('denominator[a^b]',    '1')
+  Expect('denominator[a^2]',    '1')
+  Expect('denominator[a^(-2)]', '(a^(-2))^(-1)')
 end
 
 return tests

@@ -74,6 +74,13 @@ function calc.make_fraction(num, denom)
   return nil
 end
 
+-- Utility for creating call expressions
+---@param name string  Function/symbol name to call
+---@return     Expression
+function calc.make_fn_call(name, ...)
+  return {'call', {'sym', name}, {'vec', ...}}
+end
+
 -- Utility for converting expressions to lua numbers
 -- Note that fractions are returned as two values!
 ---@param expr number|Int|Frac|Real
@@ -103,7 +110,7 @@ end
 ---@param fn string
 ---@return   boolean
 local function is_fn_p(u, fn)
-  return lib.kind(u, 'fn') and lib.fn(u) == fn
+  return lib.kind(u, 'call') and lib.call_sym(u) == fn
 end
 
 -- Returns true if n is zero
@@ -158,9 +165,10 @@ function calc.is_ratnum_p(n)
 end
 
 -- Returns if a is 'true'
----@param a Expression
+---@param a Expression|nil
 ---@return  boolean
 function calc.is_true_p(a)
+  if not a then return false end
   local num, _ = calc.to_number(a)
   return num and num ~= 0 or false
 end
@@ -199,11 +207,11 @@ end
 function calc.negate(n)
   local k = lib.kind(n)
   if k == 'int' then
-    return {'int', -n[2]}
+    return calc.make_int(-n[2])
   elseif k == 'frac' then
-    return {k, -n[2], n[3]}
+    return calc.make_fraction(-n[2], n[3])
   elseif k == 'real' then
-    return {'real', -n[2]}
+    return calc.make_real(-n[2])
   elseif k == 'vec' then
     return lib.map(n, calc.negate)
   end
@@ -782,7 +790,7 @@ function calc.sqrt(u, n, approx_p)
   end
 
   n = lib.safe_int(n)
-  if true or approx_p then -- BUG: !! symbolic mode crashes
+  if approx_p then
     if n > 1 then
       return {'^', u, fraction.make(1, n)}
     else
@@ -794,7 +802,6 @@ function calc.sqrt(u, n, approx_p)
       return {'int', p}
     end
   end
-  --return {'fn', 'sqrt', u}
 end
 
 function calc.ln(x)
@@ -831,10 +838,12 @@ function calc.abs(u)
   if lib.is_const(u) then
     if calc.sign(u) < 0 then
       return calc.negate(u)
+    else
+      return u
     end
   elseif calc.is_inf_p(u, 0) then
     return calc.INF
-  elseif is_fn_p(u, 'abs') then
+  elseif lib.safe_call_sym(u) == 'abs' then
     return u
   end
 end

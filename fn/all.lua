@@ -1,5 +1,8 @@
 require 'fn.iteration'
-require 'fn.memory'
+require 'fn.loop-control'
+
+require 'fn.env'
+
 require 'fn.io'
 require 'fn.expr'
 require 'fn.trns'

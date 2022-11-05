@@ -50,7 +50,7 @@ local function make_lambda(fn)
       local a = {...}
       local e = fn
       for i = 1, #a do
-        e = pattern.substitute_tmp(e, '$'..i..'_', a[i])
+        e = pattern.substitute_tmp(e, tostring(i), a[i])
       end
       return e
     end
@@ -93,26 +93,25 @@ function algo.denominator(u, l)
   end
 end
 
-
 -- Substitute all symbols in expr with x=y list rest entry
 function algo.subs_sym(expr, rest)
-  local sp = {}
+  local tab = {}
   for _, v in ipairs(rest) do
     local sym, repl = lib.split_args_if(v, '=', 2)
-    sym = lib.safe_sym(sym)
-    if sym and repl then
-      sp[sym] = repl
+    local ident = lib.safe_sym(sym)
+    if ident and repl then
+      tab[ident] = repl
     end
   end
 
-  local function subs_sym_rec(u)
+  return lib.map_recurse(expr, function(u)
     if lib.kind(u, 'sym') then
-      return sp[lib.safe_sym(u)] or u
-    else
-      return lib.map(u, subs_sym_rec)
+      if tab[lib.sym(u)] then
+        return tab[lib.sym(u)]
+      end
     end
-  end
-  return subs_sym_rec(expr)
+    return u
+  end)
 end
 
 function algo.map(fn, vec, env)
@@ -290,6 +289,19 @@ function algo.free_of(u, v)
   end
 end
 
+function algo.free_of_kind(u, kind)
+  if lib.kind(u, kind) then
+    return false
+  else
+    for i = 1, lib.num_args(u) do
+      if not algo.free_of_kind(lib.arg(u, i), kind) then
+        return false
+      end
+    end
+    return true
+  end
+end
+
 -- Returns a linears expression m*x+n parts as list or nil
 ---@param u Expression
 ---@param x Symbol
@@ -409,7 +421,7 @@ function algo.expand_single(u)
        (lib.kind(expo, 'frac', 'real') and  calc.sign(expo) > 0) then
       return algo.expand_power(algo.expand(base), expo)
     end
-  elseif lib.kind(u, 'fn') then
+  elseif lib.kind(u, 'call', 'vec') then
     return lib.map(u, algo.expand_single)
   end
   return u
@@ -422,18 +434,18 @@ function algo.trig_subs(u)
     return u
   else
     u = lib.map(u, algo.trig_subs)
-    if lib.kind(u, 'fn') then
-      local f = lib.fn(u)
-      local x = lib.arg(u, 1)
+    if lib.kind(u, 'call') then
+      local f = lib.safe_call_sym(u)
+      local x = lib.arg(lib.arg(u, 2), 1)
 
       if f == 'tan' then
-        return {'/', {'fn', 'sin', x}, {'fn', 'cos', x}}
+        return {'/', calc.make_fn_call('sin', x), calc.make_fn_call('cos', x)}
       elseif f == 'cot' then
-        return {'/', {'fn', 'cos', x}, {'fn', 'sin', x}}
+        return {'/', calc.make_fn_call('cos', x), calc.make_fn_call('sin', x)}
       elseif f == 'sec' then
-        return {'/', {'int', 1}, {'fn', 'cos', x}}
+        return {'/', {'int', 1}, calc.make_fn_call('cos', x)}
       elseif f == 'csc' then
-        return {'/', {'int', 1}, {'fn', 'sin', x}}
+        return {'/', {'int', 1}, calc.make_fn_call('sin', x)}
       end
     end
 
@@ -452,7 +464,7 @@ function algo.derivative(u, x, env)
   elseif lib.kind(u, '^') then
     local v, w = lib.arg(u, 1), lib.arg(u, 2)
     return {'+', {'*', w, {'^', v, {'-', w, {'int', 1}}}, algo.derivative(v, x, env)},
-                 {'*', algo.derivative(w, x, env), {'^', v, w}, {'fn', 'ln', v}}}
+                 {'*', algo.derivative(w, x, env), {'^', v, w}, calc.make_fn_call('ln', v)}}
   elseif lib.kind(u, '+') then
     local v = lib.arg(u, 1)
     local w = {'-', u, lib.arg(u, 1)}
@@ -461,47 +473,17 @@ function algo.derivative(u, x, env)
     local v = lib.arg(u, 1)
     local w = {'/', u, v}
     return {'+', {'*', algo.derivative(v, x, env), w}, {'*', v, algo.derivative(w, x, env)}}
-  elseif lib.kind(u, 'fn') and lib.fn(u, 'exp') then
-    return {'*', u, algo.derivative(lib.arg(u, 1), x, env)}
-  elseif lib.kind(u, 'fn') and lib.fn(u, 'sin') then
-    local v = lib.arg(u, 1)
-    return {'*', {'fn', 'cos', v}, algo.derivative(v, x, env)}
-  elseif algo.free_of(u, x) then
+  elseif lib.safe_call_sym(u) == 'exp' then
+    local v = lib.call_arg(u, 1)
+    return {'*', algo.derivative(v, x, env), u}
+  elseif lib.safe_call_sym(u) == 'sin' then
+    local v = lib.call_arg(u, 1)
+    return {'*', calc.make_fn_call('cos', v), algo.derivative(v, x, env)}
+  elseif algo.free_of(u or {}, x) then
     return {'int', 0}
   else
-    return {'fn', 'derivative', u, x}
+    return calc.make_fn_call('derivative', u, x)
   end
-end
-
--- Compute zeros of u with respect to x and step-count s
-function algo.newtons_method(fx, x, xn, s, env)
-  assert(lib.kind(x, 'sym'))
-
-  s = s or {'int', 1000}
-  assert(lib.kind(s, 'int'))
-
-  s = s[2]
-
-  local output = require 'output'
-
-  local fd = E(algo.derivative(fx, x), env)
-  print('  '..' fd='..output.print_alg(fd))
-
-  xn = xn or {'int', 1}
-  for i = 1, s do
-    local vx = E(algo.substitute_all(fx, x, xn))
-    local vd = E(algo.substitute_all(fd, x, xn))
-    print('  '..i..' xn='..output.print_alg(xn))
-    print('  '..i..' fx='..output.print_alg(vx))
-    print('  '..i..' dx='..output.print_alg(vd))
-
-    local new_xn = E({'-', xn, {'/', vx, vd}})
-    if lib.compare(xn, new_xn) then
-      break
-    end
-    xn = new_xn
-  end
-  return eval.eval({'fn', 'real', xn})
 end
 
 return algo

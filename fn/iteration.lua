@@ -1,16 +1,11 @@
 local fn = require 'functions'
 local lib = require 'lib'
 
--- Returns a call expression to f with args ...
-local function make_call(f, ...)
-  return {'fn', f, ...}
-end
-
 -- nest(f, expr, n)
 --   Returns f applied n times to expr
 fn.def_lua_symb('nest', {{name = 'fn'}, {name = 'x'}, {name = 'n'}},
 function(a, env)
-  local f = lib.safe_sym(a.fn) or lib.safe_fn(a.fn)
+  local f = a.fn
   local n = lib.safe_int(a.n)
 
   if not f or not n or not a.x then
@@ -19,7 +14,7 @@ function(a, env)
 
   local r = a.x
   for _ = 1, n do
-    r = make_call(f, r)
+    r = {'call', f, r}
   end
   return r
 end)

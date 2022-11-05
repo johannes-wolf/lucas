@@ -16,7 +16,7 @@ local base = {}
 ---| 'tmp'
 ---| 'sym'
 ---| 'unit'
----| 'fn'
+---| 'call'
 
 ---@reutrn boolean|nil
 function base.safe_bool(val, def)
@@ -62,8 +62,8 @@ function base.safe_unit(val)
 end
 
 ---@return string|nil
-function base.safe_fn(val)
-  if base.kind(val, 'fn') then return base.fn(val) end
+function base.safe_call_sym(val)
+  if base.kind(val, 'call') and base.kind(base.arg(val, 1), 'sym') then return base.safe_sym(base.arg(val, 1)) end
 end
 
 ---@return any
@@ -105,22 +105,14 @@ function base.is_relop(u)
   return base.kind(u, '=', '!=', '>', '>=', '<', '<=')
 end
 
--- Get (or compare) expression function name (if kind = 'fn')
-function base.fn(u, ...)
-  if not u or not base.kind(u, 'fn') then return nil end
-  if select('#', ...) > 0 then
-    return util.set.contains({...}, u[2])
-  end
-  return u[2]
-end
-
 -- Get (or compare) expression function name (if kind = 'sym')
+---@return boolean|string
 function base.sym(u, ...)
   if not u or not base.kind(u, 'sym', 'tmp') then return nil end
   if select('#', ...) > 0 then
     return util.set.contains({...}, u[2])
   end
-  return u[2]
+  return u[2] or ''
 end
 
 -- Get (or compare) expression function name (if kind = 'sym')
@@ -136,7 +128,7 @@ end
 ---@param u Expression|nil  Kind
 ---@return number           Internal argument offest
 function base.arg_offset(u)
-  return (base.kind(u, 'fn', 'sym', 'tmp', 'unit') and 2) or 1
+  return (base.kind(u, 'sym', 'tmp', 'unit') and 2) or 1
 end
 
 -- Get number of arguments
@@ -154,6 +146,14 @@ end
 ---@return Expression|nil
 function base.arg(u, n)
   return u and u[n + base.arg_offset(u)] or nil
+end
+
+-- Get nth call argument
+---@param u Expression|nil
+---@param n number
+---@return Expression|nil
+function base.call_arg(u, n)
+  return base.kind(u, 'call') and base.arg(base.arg(u, 2), n) or nil
 end
 
 -- Set nth arg
@@ -198,6 +198,21 @@ function base.mapi(u, fn, ...) -- Same as base.map, but passes index as first ar
   end
 end
 
+-- Map reucursive
+---@param u  Expression
+---@param fn function
+---@return   Expression|nil
+function base.map_recurse(u, fn, ...)
+  local function map_rec(v, ...)
+    local r = base.is_atomic(v) and fn(v, ...) or base.map(v, fn, ...)
+    if r and r == v then -- Do not re-iterate replacements
+      return map_rec(r)
+    end
+    return r
+  end
+  return map_rec(u, ...)
+end
+
 -- Inline map
 function base.transform(u, fn, ...)
   if base.num_args(u) > 0 then
@@ -236,16 +251,6 @@ function base.compare(u, v)
       return base.sym(a) == base.sym(b)
     elseif base.kind(a, 'unit') and base.kind(b, 'unit') then
       return base.unit(a) == base.unit(b)
-    elseif base.kind(a, 'fn') and base.kind(b, 'fn') then
-      if base.fn(a) == base.fn(b) and base.num_args(a) == base.num_args(b) then
-        for i = 1, base.num_args(a) do
-          if not cmp(base.arg(a, i), base.arg(b, i)) then
-            return false
-          end
-        end
-        return true
-      end
-      return false
     elseif base.num_args(a) == base.num_args(b) then
       for i = 1, base.num_args(a) do
         if not cmp(base.arg(a, i), base.arg(b, i)) then
