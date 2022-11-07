@@ -119,7 +119,7 @@ fn.def_lua('fixed_point_list', {{name = 'f'},
 function (a, env)
   local old
   local r = a.expr
-  local l = {'vec'}
+  local l = {'vec', r}
   while not lib.compare(r, old) do
     old = r
     r = E({'call', a.f, {'vec', r}}, env)
