@@ -222,7 +222,8 @@ function poly.variables(u)
       if lib.kind(s, 'sym') then
         -- Catch symbols 'x'
         table.insert(r, s)
-      elseif lib.kind(s, 'call') and not lib.is_const(lib.arg(lib.arg(s, 2), 1)) then
+      elseif lib.kind(s, 'call') and not lib.is_const(lib.call_arg(s, 1)) then
+        -- TODO: FIX ME! Check all args for constness!
         -- Catch functions with symbols 'sin(x)'
         table.insert(r, s)
       end

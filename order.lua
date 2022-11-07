@@ -35,20 +35,20 @@ function order.power(u, v)
   end
 end
 
-function order.fn(u, v)
-  if lib.fn(u) ~= lib.fn(v) then
-    return order.lexicographical(lib.fn(u), lib.fn(v))
+function order.call(u, v)
+  if lib.compare(lib.arg(u, 1), lib.arg(v, 1)) then
+    return order.front(lib.arg(u, 1), lib.arg(v, 1))
   else
-    local m, n = lib.num_args(u), lib.num_args(v)
+    local m, n = lib.num_args(lib.arg(u, 2)), lib.num_args(lib.arg(v, 2))
 
-    for j = 1, math.min(m, n) do
-      if not lib.compare(lib.arg(u, j), lib.arg(u, j)) then
-        return order.front(lib.arg(u, j), lib.arg(u, j))
+    for j = 2, math.min(m, n) do
+      if not lib.compare(lib.call_arg(u, j), lib.call_arg(v, j)) then
+        return order.front(lib.call_arg(u, j), lib.call_arg(v, j))
       end
     end
 
     local k = math.min(m, n)
-    if lib.compare(lib.arg(u, k), lib.arg(u, k)) then
+    if lib.compare(lib.call_arg(u, k), lib.call_arg(v, k)) then
       return m < m
     end
   end
@@ -75,31 +75,31 @@ function order.front(u, v)
       return order.power(u, v)
     elseif uk == '!' then
       return order.front(lib.arg(u, 1), lib.arg(v, 1))
-    elseif uk == 'fn' then
-      return order.fn(u, v)
+    elseif uk == 'call' then
+      return order.call(u, v)
     else
       return false
     end
   else
     if lib.is_const(u) and not lib.is_const(v) then
       return true
-    elseif uk == '*' and (vk == '^' or vk == '+' or vk == '!' or vk == 'fn' or vk == 'sym') then
+    elseif uk == '*' and (vk == '^' or vk == '+' or vk == '!' or vk == 'call' or vk == 'sym') then
       return order.front(u, {'*', v})
-    elseif uk == '^' and (vk == '+' or vk == '!' or vk == 'fn' or vk == 'sym') then
+    elseif uk == '^' and (vk == '+' or vk == '!' or vk == 'call' or vk == 'sym') then
       return order.front(u, {'^', v, calc.ONE})
-    elseif uk == '+' and (vk == '!' or vk == 'fn' or vk == 'sym') then
+    elseif uk == '+' and (vk == '!' or vk == 'call' or vk == 'sym') then
       return order.front(u, {'+', v})
-    elseif uk == '!' and (vk == 'fn' or vk == 'sym') then
+    elseif uk == '!' and (vk == 'call' or vk == 'sym') then
       if lib.compare(lib.arg(u, 1), v) then
         return false
       else
         return order.front(u, {'!', v})
       end
-    elseif uk == 'fn' and (vk == 'sym') then
-      if lib.fn(u) == lib.sym(v) then
+    elseif uk == 'call' and (vk == 'sym') then
+      if lib.safe_call_sym(u) == lib.sym(v) then
         return false
       else
-        return order.lexicographical(lib.fn(u), lib.sym(v))
+        return order.lexicographical(lib.safe_call_sym(u) or '', lib.sym(v))
       end
     elseif uk == 'unit' then
       return false

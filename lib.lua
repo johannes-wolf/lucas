@@ -243,7 +243,7 @@ function base.compare(u, v)
   local function cmp(a, b)
     if base.is_const(a) and base.is_const(b) then
       local calc = require 'calc'
-      return base.safe_bool(calc.eq(a, b))
+      return calc.is_true_p(calc.eq(a, b))
     elseif base.kind(a) ~= base.kind(b) then
       return false
     elseif (base.kind(a, 'sym') and base.kind(b, 'sym')) or
