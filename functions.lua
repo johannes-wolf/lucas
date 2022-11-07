@@ -174,6 +174,7 @@ function functions.call(name, call, arguments, env)
       g.error(res)
     end
   elseif v.rules then
+    env = Env(env)
     for _, r in ipairs(v.rules) do
       local vars = {}
       if pattern.match(call, r.pattern, vars) then
