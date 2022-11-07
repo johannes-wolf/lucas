@@ -55,9 +55,8 @@ end)
 
 functions.def_lua('op_order', 'var',
 function (a, _)
-  local simplify = require 'simplify'
   table.sort(a, function(x, y)
-    return simplify.order.front(x, y)
+    return order.front(x, y)
   end)
   return util.list.prepend('vec', a)
 end)
