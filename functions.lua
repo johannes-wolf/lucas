@@ -177,6 +177,7 @@ function functions.call(name, call, arguments, env)
     env = Env(env)
     for _, r in ipairs(v.rules) do
       local vars = {}
+      -- BUG: FIXME: Match agains arguments, remove call!
       if pattern.match(call, r.pattern, vars) then
         return pattern.substitute(r.expr, vars)
       end

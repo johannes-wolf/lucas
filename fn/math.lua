@@ -13,12 +13,12 @@ end)
 fn.def_lua('eq', 'var',
 function (a, _)
   return util.list.join({'='}, a)
-end, fn.attribs.flat)
+end)
 
 fn.def_lua('neq', 'var',
 function (a, _)
   return util.list.join({'!='}, a)
-end, fn.attribs.flat)
+end)
 
 fn.def_lua('min', 'var',
 function (a, _)
