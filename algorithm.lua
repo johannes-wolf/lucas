@@ -115,7 +115,6 @@ function algo.subs_sym(expr, rest)
 end
 
 function algo.map(fn, vec, env)
-  -- map is a plain function!
   vec = E(vec, env)
 
   local l = make_lambda(fn)

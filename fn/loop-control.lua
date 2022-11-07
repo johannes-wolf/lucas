@@ -31,7 +31,7 @@ function (a, env)
   else
     return E(a.if_else, env)
   end
-end, fn.attribs.plain)
+end, fn.attribs.hold_all)
 
 -- switch
 --   switch(expr, val1, res1, ..., [def])
@@ -48,7 +48,7 @@ function (a, env)
   if #a.var % 2 ~= 0 then
     return E(a.var[#a.var], env)
   end
-end, fn.attribs.plain)
+end, fn.attribs.hold_all)
 
 -- do
 --   repeat expr n times
@@ -62,7 +62,7 @@ function (a, env)
     r = E(a.expr, env)
   end
   return r
-end)
+end, fn.attribs.hold_first)
 
 -- nest
 --   apply f to expr n times

@@ -115,37 +115,14 @@ function functions.def_lua(name, args, fn, ...)
   Env.global:set_var(name, new_fn, ...)
 end
 
--- Define function that gets arguments passed unevaluated
-function functions.def_lua_symb(name, arg_mode, fn)
-  functions.def_lua(name, arg_mode, fn, 'plain')
-end
-
 functions.def_lua('approx', 1, function(u, env)
   local eval = require 'eval'
   return eval.eval(u[1], Env(env, 'approx'))
-end, 'plain')
+end)
 
 --functions.def_lua('fact', 1, function(u)
 --  return calc.factorial(u)
 --end)
-
-
--- Debug
-functions.def_lua_symb('dbg.trace', 'var',
-function (a, env)
-  local prev = dbg.trace
-  dbg.trace = true
-  local eval = require 'eval'
-  local r = eval.eval(a[1], env)
-  dbg.trace = prev
-  return r
-end)
-functions.def_lua_symb('dbg', 'var', function(args)
-  for _, v in ipairs(args) do
-    print(dbg.dump(v))
-  end
-  return {'int', 0}
-end)
 
 -- Number
 functions.def_lua('sign',  1, function(u)

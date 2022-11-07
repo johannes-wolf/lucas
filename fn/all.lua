@@ -1,4 +1,3 @@
-require 'fn.iteration'
 require 'fn.loop-control'
 
 require 'fn.env'
