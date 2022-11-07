@@ -118,7 +118,23 @@ function eval.call(expr, env)
     end)
   end
 
-  print('CALL: '..ident..' with '..dbg.dump(args))
+  local flatten = util.set.contains(attribs, fn.attribs.flat)
+  if flatten then
+    local flat_args = {'vec'}
+    local function flatten_rec(call_args)
+      for i = 1, lib.num_args(call_args) do
+        local a = lib.arg(call_args, i)
+        if lib.safe_call_sym(a) == ident then
+          flatten_rec(lib.arg(a, 2))
+        else
+          table.insert(flat_args, a)
+        end
+      end
+    end
+    flatten_rec(args)
+    args = flat_args
+  end
+
   local r = fn.call(ident, expr, args, env)
   if r then
     if allow_recall(expr, r) then

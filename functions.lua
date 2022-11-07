@@ -11,10 +11,11 @@ local functions = {}
 
 ---@enum
 functions.attribs = {
-  hold_first = 'hold_first',
-  hold_rest  = 'hold_rest',
-  hold_all   = 'hold_all',
-  listable   = 'listable',
+  hold_first = 'hold_first', -- Hold first argument
+  hold_rest  = 'hold_rest',  -- Hold all but first argument
+  hold_all   = 'hold_all',   -- Hold all arguments
+  listable   = 'listable',   -- Auto call on each list value  f({1,2,3}) => {f(1),f(2),f(3)}
+  flat       = 'flat',       -- Auto flatten arguments        f(f(x), y) => f(x, y)
 }
 
 functions.match = {
@@ -90,7 +91,7 @@ function functions.def_lua(name, args, fn, ...)
   elseif type(args) == 'number' then
     new_fn = function(a, env)
       if a and #a ~= args then
-        g.error(string.format('%s: Invalid argument count %d', args))
+        g.error(string.format('%s: Invalid argument count %d', name, args))
         return nil
       end
       return fn(a, env)
