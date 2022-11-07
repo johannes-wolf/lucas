@@ -41,6 +41,7 @@ function matrix.get_row(l, n)
   return lib.arg(l, n)
 end
 
+-- Apply function fn on matrix a with cells of matrix a and b
 function matrix.apply2(a, b, f)
   a = lib.expect_kind(a, 'vec')
   b = lib.expect_kind(b, 'vec')

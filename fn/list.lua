@@ -56,6 +56,7 @@ function list.intersection(a, b)
   return c
 end
 
+-- Remove duplicate list elements
 function list.unique(l)
   l = lib.expect_kind(l, 'vec')
   local r = {'vec'}
@@ -66,6 +67,16 @@ function list.unique(l)
     end
   end
   return r
+end
+
+-- Sort list
+---@param l       List      List to sort
+---@param sort_fn function  Lua sort callback
+function list.sort(l, sort_fn)
+  local order = require 'order'
+  sort_fn = sort_fn or order.before
+  table.sort(l, fn)
+  return l
 end
 
 fn.def_lua('list', 'var',

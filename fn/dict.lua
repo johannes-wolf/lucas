@@ -83,7 +83,7 @@ end)
 
 fn.def_lua('dict.sort', {{name = 'dict'}},
 function (a, _)
-  local simplify = require 'simplify'
+  local order = require 'order'
   local t = lib.get_args(a.dict) or {}
   table.sort(t, function(l, r)
     if lib.kind(l, 'vec') and lib.kind(r, 'vec') then
@@ -92,7 +92,7 @@ function (a, _)
       if lib.kind(l, 'tmp') and lib.kind(r, 'tmp') then
         return lib.safe_sym(l) < lib.safe_sym(r)
       end
-      return simplify.order.front(l, r) -- TODO: move to own file
+      return order.front(l, r)
     end
     return false
   end)

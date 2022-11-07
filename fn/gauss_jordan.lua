@@ -12,16 +12,6 @@ local function S(expr, env)
   return simplify.expr(expr, env)
 end
 
-local function print_m(ce)
-  local output = require 'output'
-  for m = 1, lib.num_args(ce) do
-    for n = 1, lib.num_args(lib.arg(ce, m)) do
-      io.stdout:write(string.format(' %4s ', output.print_alg(lib.arg(lib.arg(ce, m), n))))
-    end
-    io.stdout:write('\n')
-  end
-end
-
 local function find_nonzero_column(ce, cm)
   for m = cm, lib.num_args(ce) do
     for n = 1, lib.num_args(lib.arg(ce, m)) do

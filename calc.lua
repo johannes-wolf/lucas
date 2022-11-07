@@ -888,4 +888,37 @@ function calc.lnot(a)
   end
 end
 
+-- Return base of an expression
+-- Example:
+--   x^2 => x
+--   x   => x
+function calc.base(u)
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'call') then
+    return u
+  elseif lib.kind(u, '^') then
+    return lib.arg(u, 1)
+  elseif lib.kind(u) then
+    return nil
+  else
+    error('unreachable kind='..(lib.kind(u) or 'nil'))
+  end
+end
+
+-- Return exponent of an expression
+-- Example:
+--   x^2 => 2
+--   x   => 1
+function calc.exponent(u)
+  if lib.kind(u, 'vec', 'sym', 'tmp', 'unit', '*', '+', '!', 'call') then
+    return {'int', 1}
+  elseif lib.kind(u, '^') then
+    return lib.arg(u, 2)
+  elseif lib.is_const(u) then
+    return nil
+  else
+    error('unreachable kind='..lib.kind(u))
+  end
+end
+
+
 return calc
