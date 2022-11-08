@@ -1,4 +1,5 @@
 require 'fn.loop-control'
+require 'fn.trigo'
 
 require 'fn.env'
 

@@ -130,7 +130,11 @@ function units.extract_units(u)
       return {'^', b, units.extract_units(lib.arg(u, 2))}
     end
   else
-    return lib.map(u, units.extract_units)
+    local v = lib.map(u, units.extract_units)
+    if lib.kind(v, '*', '+') and lib.num_args(v) == 1 then
+      return lib.arg(v, 1)
+    end
+    return v
   end
 end
 
