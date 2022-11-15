@@ -4,7 +4,6 @@ local calc = require 'calc'
 local pattern = require 'pattern'
 local util = require 'util'
 local Env = require 'env'
-local dbg = require 'dbg'
 local g = require 'global'
 
 local functions = {}

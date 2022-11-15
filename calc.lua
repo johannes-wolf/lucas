@@ -91,7 +91,7 @@ function calc.to_number(expr, ...)
     if not lib.kind(expr, ...) then return nil end
   end
   if lib.kind(expr, 'int', 'real') then
-    return expr[2]
+    return expr[2], 1
   elseif lib.kind(expr, 'frac') then
     return expr[2], expr[3]
   end

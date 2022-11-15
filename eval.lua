@@ -2,12 +2,11 @@ local lib = require 'lib'
 local Env = require 'env'
 local simplify = require 'simplify'
 local fn = require 'functions'
-local pattern = require 'pattern'
+local units = require 'units'
 local calc = require 'calc'
 local algo = require 'algorithm'
 local g = require 'global'
 local util = require 'util'
-local dbg = require 'dbg'
 
 local eval = {}
 
@@ -95,15 +94,6 @@ function eval.call(expr, env)
   local args = lib.arg(expr, 2)
   local attribs = env:get_attribs(ident)
 
-  local listable = util.set.contains(attribs, fn.attribs.listable)
-  if listable and lib.num_args(args) > 1 then
-    if lib.kind(lib.arg(args, 1), 'vec') then
-      return lib.mapi(lib.arg(args, 1), function( sub)
-        return {'call', sym, util.list.join({'vec', sub}, lib.get_args(args, 2))}
-      end)
-    end
-  end
-
   local hold_all = util.set.contains(attribs, fn.attribs.hold_all)
   local hold_first = hold_all or util.set.contains(attribs, fn.attribs.hold_first)
   local hold_rest = hold_all or util.set.contains(attribs, fn.attribs.hold_rest)
@@ -116,23 +106,6 @@ function eval.call(expr, env)
       end
       return sub
     end)
-  end
-
-  local flatten = util.set.contains(attribs, fn.attribs.flat)
-  if flatten then
-    local flat_args = {'vec'}
-    local function flatten_rec(call_args)
-      for i = 1, lib.num_args(call_args) do
-        local a = lib.arg(call_args, i)
-        if lib.safe_call_sym(a) == ident then
-          flatten_rec(lib.arg(a, 2))
-        else
-          table.insert(flat_args, a)
-        end
-      end
-    end
-    flatten_rec(args)
-    args = flat_args
   end
 
   local r = fn.call(ident, expr, args, env)
@@ -167,6 +140,11 @@ function eval.unit(expr, env)
     local v = env:get_var(u)
     if v and v.unit and allow_recall(expr, v.unit) then
       return eval.eval(v.unit, env)
+    end
+
+    v = units.table[u]
+    if v and v.value then
+      return eval.eval(v.value, env)
     end
   end
   return expr

@@ -3,6 +3,7 @@ local util = require 'util'
 local calc = require 'calc'
 local order = require 'order'
 local op = require 'operator'
+local fn = require 'functions'
 local dbg = require 'dbg'
 
 local function trace_step(step, ...)
@@ -502,8 +503,38 @@ function simplify.call(u, env)
       return u
     end
 
+    local args = lib.arg(u, 2)
+    local attribs = env:get_attribs(ident)
+
+    local listable = util.set.contains(attribs, fn.attribs.listable)
+    if listable and lib.num_args(args) > 1 then
+      if lib.kind(lib.arg(args, 1), 'vec') then
+        return lib.mapi(lib.arg(args, 1), function(sub)
+          return {'call', {'sym', ident}, util.list.join({ 'vec', sub }, lib.get_args(args, 2))}
+        end)
+      end
+    end
+
+    local flatten = util.set.contains(attribs, fn.attribs.flat)
+    if flatten then
+      local flat_args = { 'vec' }
+      local function flatten_rec(call_args)
+        for i = 1, lib.num_args(call_args) do
+          local a = lib.arg(call_args, i)
+          if lib.safe_call_sym(a) == ident then
+            flatten_rec(lib.arg(a, 2))
+          else
+            table.insert(flat_args, a)
+          end
+        end
+      end
+
+      flatten_rec(args)
+      args = flat_args
+    end
+
     u = lib.map(u, simplify.expr, env)
-    return u -- TODO: Call function?
+    return u
   elseif lib.kind(target, 'vec') then
     -- Subscript
     u = lib.map(u, simplify.expr, env)

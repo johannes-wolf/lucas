@@ -89,10 +89,10 @@ units.def_si_unit('cd', 'Candela')
 units.def_si_unit('l', 'Litre', '_dm^3')
 
 -- Angles
-units.def_unit('rad', 'Radians')
-units.def_unit('deg', 'Degree',   '(pi _rad) / 180', 'rad')
-units.def_unit('gon', 'Gradians', '(pi _rad) / 200', 'rad')
-units.def_unit('tr',  'Turn',     '2 pi _rad',       'rad')
+units.def_unit('rad', 'Radians',  '1')
+units.def_unit('deg', 'Degree',   'pi _rad / 180', 'rad')
+units.def_unit('gon', 'Gradians', 'pi _rad / 200', 'rad')
+units.def_unit('tr',  'Turn',     '2 pi _rad',     'rad')
 
 
 -- Compiles all registered (not yet compiled) units
@@ -134,7 +134,7 @@ function units.extract_units(u)
     if lib.kind(v, '*', '+') and lib.num_args(v) == 1 then
       return lib.arg(v, 1)
     end
-    return v
+    return nil
   end
 end
 
